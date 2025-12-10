@@ -33,6 +33,7 @@ export const AuthProvider = ({ children }) => {
   const fetchUserProfile = useCallback(async () => {
     try {
       const response = await api.get('/users/me');
+      console.log('User profile fetched:', response.data);
       setUser(response.data);
       setIsAuthenticated(true);
     } catch (error) {

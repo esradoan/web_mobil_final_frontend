@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,6 +10,7 @@ import { User, Mail, Save, Upload, Camera, Sparkles } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import GlassCard from '../components/GlassCard';
 import AnimatedCard from '../components/AnimatedCard';
+import { getUserProfilePicture } from '../utils/imageUtils';
 
 const profileSchema = z.object({
   firstName: z.string().min(2, 'Ad en az 2 karakter olmalıdır'),
@@ -22,6 +23,10 @@ const Profile = () => {
   const { user, fetchUserProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // Debug: User objesini console'a yazdır
+  console.log('Current user object:', user);
 
   const {
     register,
@@ -51,11 +56,24 @@ const Profile = () => {
   };
 
   const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const file = e.target.files?.[0];
+    if (!file) {
+      console.log('Dosya seçilmedi');
+      return;
+    }
+
+    console.log('Seçilen dosya:', file.name, file.type);
 
     if (!file.type.startsWith('image/')) {
       toast.error('Sadece resim dosyaları yüklenebilir');
+      e.target.value = ''; // Reset input
+      return;
+    }
+
+    // Max 5MB kontrolü
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Dosya boyutu 5MB\'dan küçük olmalıdır');
+      e.target.value = '';
       return;
     }
 
@@ -64,16 +82,25 @@ const Profile = () => {
       const formData = new FormData();
       formData.append('file', file);
 
-      await api.post('/users/me/profile-picture', formData, {
+      console.log('Profil resmi yükleniyor...');
+      const uploadResponse = await api.post('/users/me/profile-picture', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
+      
+      console.log('Upload response:', uploadResponse.data);
 
+      // Kullanıcı profilini yeniden yükle
       await fetchUserProfile();
+      
       toast.success('Profil resmi başarıyla yüklendi!');
+      e.target.value = ''; // Reset input for next upload
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Profil resmi yüklenemedi');
+      console.error('Profil resmi yükleme hatası:', error);
+      console.error('Error response:', error.response?.data);
+      toast.error(error.response?.data?.message || error.response?.data?.Message || 'Profil resmi yüklenemedi');
+      e.target.value = '';
     } finally {
       setUploading(false);
     }
@@ -109,54 +136,97 @@ const Profile = () => {
           <GlassCard className="p-8">
           <div className="flex flex-col items-center">
             <div className="relative mb-4">
-              <motion.div
-                className="w-32 h-32 rounded-full bg-gradient-to-br from-primary-400 via-primary-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold shadow-2xl relative overflow-hidden"
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                transition={{ type: 'spring', stiffness: 300 }}
-              >
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                  animate={{
-                    x: ['-100%', '100%'],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    repeatDelay: 1,
-                  }}
-                />
-                <span className="relative z-10">
-                  {user?.firstName?.[0]}{user?.lastName?.[0]}
-                </span>
-              </motion.div>
-              {user?.profilePictureUrl && (
-                <motion.img
-                  src={user.profilePictureUrl}
-                  alt="Profile"
-                  className="w-32 h-32 rounded-full object-cover absolute inset-0"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring' }}
-                />
-              )}
-              <motion.label
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                className="absolute bottom-0 right-0 p-3 bg-gradient-to-br from-primary-600 to-primary-700 rounded-full cursor-pointer shadow-xl hover:shadow-2xl transition-all"
-              >
-                <Camera className="w-5 h-5 text-white" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  disabled={uploading}
-                />
-              </motion.label>
+              {(() => {
+                // Utility fonksiyonu ile profil resmi URL'ini al
+                const profilePictureUrl = getUserProfilePicture(user);
+                console.log('Profile Picture URL:', profilePictureUrl);
+                
+                return (
+                  <motion.div
+                    className="w-32 h-32 rounded-full bg-gradient-to-br from-primary-400 via-primary-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold shadow-2xl relative overflow-hidden cursor-pointer"
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ type: 'spring', stiffness: 300 }}
+                    onClick={() => {
+                      console.log('Avatar üzerine tıklandı');
+                      if (!uploading) {
+                        fileInputRef.current?.click();
+                      }
+                    }}
+                  >
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                      animate={{
+                        x: ['-100%', '100%'],
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        repeatDelay: 1,
+                      }}
+                    />
+                    
+                    {/* Default Avatar (Initials) */}
+                    <span className="relative z-10">
+                      {user?.firstName?.[0] || user?.FirstName?.[0]}
+                      {user?.lastName?.[0] || user?.LastName?.[0]}
+                    </span>
+                    
+                    {/* Profile Picture Overlay */}
+                    {profilePictureUrl && (
+                      <img
+                        src={profilePictureUrl}
+                        alt="Profile"
+                        className="w-32 h-32 rounded-full object-cover absolute inset-0 z-20"
+                        onError={(e) => {
+                          console.error('❌ Resim yükleme hatası (404):', profilePictureUrl);
+                          console.error('Backend /uploads klasörünü static olarak serve etmiyor!');
+                          console.error('Çözüm: Backend Program.cs dosyasına app.UseStaticFiles() ekleyin');
+                          e.target.style.display = 'none';
+                          toast.error('Profil resmi yüklenemedi. Backend static file serving ayarlarını kontrol edin.');
+                        }}
+                        onLoad={() => {
+                          console.log('✅ Resim başarıyla yüklendi:', profilePictureUrl);
+                        }}
+                      />
+                    )}
+                    
+                    {/* Camera Icon Overlay */}
+                    <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center z-30">
+                      <Camera className="w-8 h-8 text-white" />
+                    </div>
+                  </motion.div>
+                );
+              })()}
+              
+              {/* Hidden File Input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                className="hidden"
+                disabled={uploading}
+                style={{ display: 'none' }}
+              />
             </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                {uploading ? 'Yükleniyor...' : 'Profil resmini değiştirmek için tıklayın'}
-              </p>
+              <div className="text-center">
+                {uploading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <motion.div
+                      className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    />
+                    <p className="text-sm text-primary-600 dark:text-primary-400 font-medium">
+                      Profil resmi yükleniyor...
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    Profil resmini değiştirmek için avatara tıklayın
+                  </p>
+                )}
+              </div>
           </div>
           </GlassCard>
         </AnimatedCard>
