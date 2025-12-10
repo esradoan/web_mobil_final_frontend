@@ -62,8 +62,8 @@
   
   .btn-primary:active {
     transform: scale(0.95);
-  }
-  
+}
+
   .btn-primary::before {
     content: '';
     position: absolute;
@@ -71,12 +71,12 @@
     background: rgba(255, 255, 255, 0.2);
     transform: translateX(-100%);
     transition: transform 0.7s;
-  }
+}
   
   .btn-primary:hover::before {
     transform: translateX(100%);
-  }
-  
+}
+
   .btn-secondary {
     padding: 0.75rem 1.5rem;
     border-radius: 0.5rem;
@@ -93,8 +93,8 @@
     background: rgba(30, 41, 59, 0.8);
     color: rgb(96, 165, 250);
     border-color: rgba(96, 165, 250, 0.5);
-  }
-  
+}
+
   .btn-secondary:hover {
     background: rgb(240, 249, 255);
     transform: scale(1.05);
@@ -103,8 +103,8 @@
   
   .dark .btn-secondary:hover {
     background: rgb(51, 65, 85);
-  }
-  
+}
+
   .input-field {
     width: 100%;
     padding: 0.75rem 1rem;
@@ -148,7 +148,7 @@
   .dark .card {
     background: rgba(30, 41, 59, 0.8);
     border-color: rgba(51, 65, 85, 0.5);
-  }
+}
   
   .card:hover {
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
@@ -157,7 +157,7 @@
   
   .dark .card:hover {
     border-color: rgba(96, 165, 250, 0.5);
-  }
+}
   
   .glass-card {
     backdrop-filter: blur(16px);
@@ -178,8 +178,8 @@
     background-clip: text;
     -webkit-text-fill-color: transparent;
     color: transparent;
-  }
-  
+}
+
   .shimmer {
     position: relative;
     overflow: hidden;
@@ -199,7 +199,7 @@
   @keyframes shimmer {
     0% {
       transform: translateX(-100%);
-    }
+  }
     100% {
       transform: translateX(100%);
     }
