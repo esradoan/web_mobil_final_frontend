@@ -1,19 +1,21 @@
 import axios from 'axios';
 
-// API Base URL - Development
-// Backend Visual Studio'da çalışıyorsa:
-// - HTTP: http://localhost:5226
-// - HTTPS: https://localhost:7183
-// Önce HTTP'yi dene, çalışmazsa HTTPS'i dene
+// API Base URL Configuration
+// Environment variable'dan al, yoksa default localhost kullan
+// Local: .env.local dosyasında VITE_API_BASE_URL=http://localhost:5226/api/v1
+// Production: Railway'de environment variable olarak VITE_API_BASE_URL ayarla
 const getApiBaseUrl = () => {
-  // Environment variable varsa onu kullan
+  // Environment variable varsa onu kullan (hem local hem production için)
   if (import.meta.env.VITE_API_BASE_URL) {
+    console.log('Using API URL from environment:', import.meta.env.VITE_API_BASE_URL);
     return import.meta.env.VITE_API_BASE_URL;
   }
   
-  // Visual Studio default port'ları
-  // HTTP port'u önce dene
-  return 'http://localhost:5226/api/v1';
+  // Fallback: Local development için default
+  const defaultUrl = 'http://localhost:5226/api/v1';
+  console.warn('VITE_API_BASE_URL not set, using default:', defaultUrl);
+  console.warn('For local development, create .env.local file with VITE_API_BASE_URL');
+  return defaultUrl;
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -24,8 +26,8 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  // Timeout ekle
-  timeout: 10000,
+  // Timeout süresini artır (30 saniye)
+  timeout: 30000,
 });
 
 // Request interceptor - Add token to requests
@@ -53,9 +55,27 @@ api.interceptors.response.use(
     if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED') {
       console.error('Backend bağlantı hatası! Backend\'in çalıştığından emin olun.');
       console.error('Beklenen URL:', API_BASE_URL);
+      const isProduction = import.meta.env.PROD;
+      const errorMessage = isProduction
+        ? 'Backend bağlantı hatası. Lütfen backend servisinin çalıştığından emin olun.'
+        : `Backend bağlantı hatası. Backend'in çalıştığından emin olun. (${API_BASE_URL})`;
       return Promise.reject({
         ...error,
-        message: 'Backend bağlantı hatası. Backend\'in çalıştığından emin olun.',
+        message: errorMessage,
+      });
+    }
+
+    // Timeout hatası
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      console.error('Backend yanıt vermiyor (timeout)!');
+      console.error('Beklenen URL:', API_BASE_URL);
+      const isProduction = import.meta.env.PROD;
+      const errorMessage = isProduction
+        ? 'Backend yanıt vermiyor. Lütfen backend servisinin çalıştığından emin olun.'
+        : `Backend yanıt vermiyor. Lütfen backend'in çalıştığından emin olun. (${API_BASE_URL})`;
+      return Promise.reject({
+        ...error,
+        message: errorMessage,
       });
     }
 

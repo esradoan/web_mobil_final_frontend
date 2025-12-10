@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -6,11 +6,12 @@ import { motion } from 'framer-motion';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../config/api';
-import { User, Mail, Save, Upload, Camera, Sparkles } from 'lucide-react';
+import { User, Mail, Save, Upload, Camera, Sparkles, CheckCircle, AlertCircle, Send } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import GlassCard from '../components/GlassCard';
 import AnimatedCard from '../components/AnimatedCard';
 import { getUserProfilePicture } from '../utils/imageUtils';
+import { useSearchParams } from 'react-router-dom';
 
 const profileSchema = z.object({
   firstName: z.string().min(2, 'Ad en az 2 karakter olmalıdır'),
@@ -21,12 +22,43 @@ const profileSchema = z.object({
 
 const Profile = () => {
   const { user, fetchUserProfile } = useAuth();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [sendingVerification, setSendingVerification] = useState(false);
   const fileInputRef = useRef(null);
 
   // Debug: User objesini console'a yazdır
   console.log('Current user object:', user);
+  console.log('Email verified status:', {
+    isEmailVerified: user?.isEmailVerified,
+    IsEmailVerified: user?.IsEmailVerified,
+    emailConfirmed: user?.emailConfirmed,
+    all: user
+  });
+
+  // Profil sayfası her yüklendiğinde kullanıcı bilgilerini yenile (email doğrulama durumunu güncellemek için)
+  useEffect(() => {
+    // Sayfa yüklendiğinde kullanıcı bilgilerini yenile
+    const refreshProfile = async () => {
+      if (user) {
+        console.log('🔄 Profil sayfası yüklendi, kullanıcı bilgileri yenileniyor...');
+        await fetchUserProfile();
+        console.log('✅ Kullanıcı bilgileri yenilendi');
+      }
+    };
+    refreshProfile();
+  }, []); // Sadece component mount olduğunda çalışır
+
+  // Email doğrulandıktan sonra profil sayfasına dönüldüğünde kullanıcı bilgilerini yenile
+  useEffect(() => {
+    const verified = searchParams.get('verified');
+    if (verified === 'true') {
+      fetchUserProfile();
+      // URL'den verified parametresini temizle
+      window.history.replaceState({}, '', '/profile');
+    }
+  }, [searchParams, fetchUserProfile]);
 
   const {
     register,
@@ -52,6 +84,28 @@ const Profile = () => {
       toast.error(error.response?.data?.message || 'Profil güncellenemedi');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerificationEmail = async () => {
+    if (!user?.email) {
+      toast.error('Email adresi bulunamadı');
+      return;
+    }
+
+    setSendingVerification(true);
+    try {
+      await api.post('/auth/resend-verification-email', { email: user.email });
+      toast.success('Doğrulama emaili gönderildi! Email kutunuzu kontrol edin.');
+    } catch (error) {
+      if (error.response?.data?.message?.includes('already verified')) {
+        toast.error('Email adresiniz zaten doğrulanmış');
+        await fetchUserProfile(); // Refresh user data
+      } else {
+        toast.error(error.response?.data?.message || 'Email gönderilemedi');
+      }
+    } finally {
+      setSendingVerification(false);
     }
   };
 
@@ -230,6 +284,65 @@ const Profile = () => {
           </div>
           </GlassCard>
         </AnimatedCard>
+
+        {/* Email Verification Alert */}
+        {user && !(user.isEmailVerified || user.IsEmailVerified || user.emailConfirmed) && (
+          <AnimatedCard delay={0.15}>
+            <GlassCard className="p-6 border-2 border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-900/10">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <AlertCircle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-yellow-800 dark:text-yellow-300 mb-1">
+                    Email Adresinizi Doğrulayın
+                  </h3>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-400 mb-3">
+                    Email adresiniz henüz doğrulanmamış. Lütfen email kutunuzu kontrol edin ve doğrulama linkine tıklayın.
+                  </p>
+                  <motion.button
+                    type="button"
+                    onClick={handleResendVerificationEmail}
+                    disabled={sendingVerification}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {sendingVerification ? (
+                      <>
+                        <motion.div
+                          className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        />
+                        Gönderiliyor...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Doğrulama Emaili Gönder
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+              </div>
+            </GlassCard>
+          </AnimatedCard>
+        )}
+
+        {/* Email Verified Success */}
+        {user && (user.isEmailVerified || user.IsEmailVerified || user.emailConfirmed) && (
+          <AnimatedCard delay={0.15}>
+            <GlassCard className="p-4 border-2 border-green-500/50 bg-green-50/50 dark:bg-green-900/10">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                  ✓ Email adresiniz doğrulanmış
+                </p>
+              </div>
+            </GlassCard>
+          </AnimatedCard>
+        )}
 
         {/* Profile Form */}
         <AnimatedCard delay={0.2}>

@@ -172,6 +172,22 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('tokenExpiration');
       
+      // Timeout hatası kontrolü
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        return {
+          success: false,
+          error: 'Backend yanıt vermiyor. Lütfen backend\'in çalıştığından emin olun (http://localhost:5226)',
+        };
+      }
+
+      // Network hatası kontrolü
+      if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED') {
+        return {
+          success: false,
+          error: 'Backend bağlantı hatası. Backend\'in çalıştığından emin olun (http://localhost:5226)',
+        };
+      }
+
       const errorMessage = error.response?.data?.Detailed || 
                           error.response?.data?.Message ||
                           error.response?.data?.message ||
@@ -187,7 +203,13 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const response = await api.post('/auth/register', userData);
-      return { success: true, data: response.data };
+      // Backend RegisterResponseDto döndürüyor: User, VerificationUrl, VerificationToken
+      return { 
+        success: true, 
+        data: response.data,
+        verificationUrl: response.data.VerificationUrl || response.data.verificationUrl,
+        verificationToken: response.data.VerificationToken || response.data.verificationToken
+      };
     } catch (error) {
       console.error('Registration error:', error);
       console.error('Error response:', error.response?.data);

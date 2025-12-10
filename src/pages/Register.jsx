@@ -88,14 +88,19 @@ const Register = () => {
 
     if (result.success) {
       setSuccess(true);
+      // Başarılı kayıt sonrası 2 saniye bekle ve login sayfasına yönlendir
       setTimeout(() => {
-        navigate('/login');
+        navigate('/login', { 
+          replace: true,
+          state: { 
+            message: 'Kayıt başarılı! Email adresinize gönderilen doğrulama linkine tıklayarak hesabınızı aktif edebilirsiniz. Profil sayfasından da doğrulama emaili gönderebilirsiniz.' 
+          }
+        });
       }, 2000);
     } else {
       setError(result.error || 'Kayıt başarısız');
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -163,12 +168,23 @@ const Register = () => {
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-2"
+              className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg"
             >
-              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
-              <p className="text-sm text-green-600 dark:text-green-400">
-                Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz...
-              </p>
+              <div className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">
+                    Kayıt başarılı!
+                  </p>
+                  <p className="text-xs text-green-600/80 dark:text-green-400/80">
+                    Email adresinize doğrulama linki gönderildi. Lütfen email'inizi kontrol edin. 
+                    Giriş yaptıktan sonra profil sayfasından da doğrulama emaili gönderebilirsiniz.
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                    Giriş sayfasına yönlendiriliyorsunuz...
+                  </p>
+                </div>
+              </div>
             </motion.div>
           )}
 

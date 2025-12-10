@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import VerifyEmail from './pages/VerifyEmail';
 import TestConnection from './pages/TestConnection';
 
 // Components
@@ -108,6 +109,19 @@ function AppRoutes() {
                 <ResetPassword />
               </motion.div>
             </PublicRoute>
+          }
+        />
+        <Route
+          path="/verify-email"
+          element={
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <VerifyEmail />
+            </motion.div>
           }
         />
         <Route

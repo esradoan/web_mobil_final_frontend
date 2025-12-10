@@ -29,7 +29,35 @@ const ResetPassword = () => {
   const [error, setError] = useState('');
 
   const email = searchParams.get('email') || '';
-  const token = searchParams.get('token') || '';
+  
+  // Token'ı URL'den al ve decode et
+  // useSearchParams bazen token'ı decode etmeyebilir, bu yüzden manuel decode yapıyoruz
+  let token = searchParams.get('token') || '';
+  
+  // Eğer token boşsa, URL'den direkt al
+  if (!token) {
+    try {
+      const urlParams = new URL(window.location.href).searchParams;
+      token = urlParams.get('token') || '';
+    } catch (e) {
+      console.error('Error getting token from URL:', e);
+    }
+  }
+  
+  // Token'ı decode et (URL encoded karakterler varsa)
+  // Token'da % karakteri varsa, decode etmemiz gerekiyor
+  if (token && token.includes('%')) {
+    try {
+      // decodeURIComponent ile decode et
+      token = decodeURIComponent(token);
+      console.log('✅ Token decoded from URL encoding');
+    } catch (e) {
+      console.error('❌ Token decode failed:', e);
+      // Decode başarısız olursa, token'ı olduğu gibi kullan
+    }
+  } else if (token) {
+    console.log('ℹ️ Token does not contain % - already decoded or not encoded');
+  }
 
   const {
     register,
@@ -76,21 +104,43 @@ const ResetPassword = () => {
 
   const onSubmit = async (data) => {
     setError('');
+    setSuccess(false);
     setLoading(true);
 
     try {
+      // Token'ı decode edilmiş halde gönder
+      // Backend tekrar decode edecek ama önce frontend'de decode etmeliyiz
+      const tokenToSend = data.token;
+      
+      console.log('📤 Sending reset password request:');
+      console.log('   Email:', data.email);
+      console.log('   Token length:', tokenToSend.length);
+      console.log('   Token (first 30):', tokenToSend.substring(0, 30));
+      console.log('   Token (last 30):', '...' + tokenToSend.substring(Math.max(0, tokenToSend.length - 30)));
+      console.log('   Token contains %:', tokenToSend.includes('%'));
+      console.log('   Token contains +:', tokenToSend.includes('+'));
+      console.log('   Token contains /:', tokenToSend.includes('/'));
+      console.log('   Token contains =:', tokenToSend.includes('='));
+      
       await api.post('/auth/reset-password', {
         email: data.email,
-        token: data.token,
+        token: tokenToSend, // Decode edilmiş token'ı gönder
         newPassword: data.newPassword,
         confirmPassword: data.confirmPassword,
       });
+      
       setSuccess(true);
+      setError('');
       setTimeout(() => {
         navigate('/login');
       }, 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Şifre sıfırlama başarısız');
+      setSuccess(false);
+      const errorMessage = err.response?.data?.message || 
+                          err.response?.data?.Message ||
+                          'Şifre sıfırlama başarısız';
+      setError(errorMessage);
+      console.error('❌ Reset password error:', errorMessage);
     } finally {
       setLoading(false);
     }

@@ -90,16 +90,18 @@ const ForgotPassword = () => {
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-start gap-3"
+              className="mb-4 space-y-3"
             >
-              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">
-                  Email gönderildi!
-                </p>
-                <p className="text-xs text-green-600/80 dark:text-green-400/80">
-                  Email adresinize şifre sıfırlama linki gönderildi. Lütfen email kutunuzu kontrol edin.
-                </p>
+              <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">
+                    Email gönderildi!
+                  </p>
+                  <p className="text-xs text-green-600/80 dark:text-green-400/80">
+                    Email adresinize şifre sıfırlama linki gönderildi. Lütfen email kutunuzu kontrol edin.
+                  </p>
+                </div>
               </div>
             </motion.div>
           )}

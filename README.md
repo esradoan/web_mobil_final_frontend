@@ -33,10 +33,30 @@ npm run preview
 
 ## 🔧 Yapılandırma
 
-`.env` dosyası oluşturun:
+### Local Development
+
+Proje root dizininde `.env.local` dosyası oluşturun:
 
 ```env
-VITE_API_BASE_URL=http://localhost:5000/api/v1
+VITE_API_BASE_URL=http://localhost:5226/api/v1
+```
+
+**Not:** `.env.local` dosyası `.gitignore`'da olduğu için Git'e commit edilmez.
+
+### Production (Railway)
+
+Railway'de environment variable olarak ayarlayın:
+
+1. Railway dashboard'a gidin
+2. Projenizi seçin
+3. **Variables** sekmesine gidin
+4. Yeni variable ekleyin:
+   - **Name:** `VITE_API_BASE_URL`
+   - **Value:** `https://your-backend.railway.app/api/v1`
+
+Veya Railway CLI ile:
+```bash
+railway variables set VITE_API_BASE_URL=https://your-backend.railway.app/api/v1
 ```
 
 ## 📁 Proje Yapısı
@@ -65,9 +85,11 @@ src/
 ## 🔗 Backend Entegrasyonu
 
 Frontend, .NET backend API'sine bağlanır:
-- Base URL: `http://localhost:5000/api/v1`
-- Authentication: JWT Bearer tokens
-- Auto token refresh
+- **Local:** `http://localhost:5226/api/v1` (Visual Studio default port)
+- **Production:** Railway backend URL'i (environment variable'dan alınır)
+- **Authentication:** JWT Bearer tokens
+- **Auto token refresh:** Otomatik token yenileme
+- **Timeout:** 30 saniye
 
 ## 📝 Sayfalar
 
