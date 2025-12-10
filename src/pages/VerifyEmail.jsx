@@ -102,16 +102,21 @@ const VerifyEmail = () => {
         Token: token, // Decode edilmiş token'ı gönder (backend tekrar decode etmeyecek)
       });
       
-      // Başarılı - error'ı temizle ve success'i set et
+      // Başarılı response geldi - email doğrulandı
+      // Error'ı temizle ve success'i set et (önceden set edilmiş error varsa temizle)
       setError('');
       setSuccess(true);
       setLoading(false);
+      
+      // Toast mesajını göster (sadece bir kez)
       toast.success('Email başarıyla doğrulandı!');
       
-      // Backend'den güncel user bilgilerini al
+      // Backend'den güncel user bilgilerini al (varsa)
       const updatedUser = response.data?.user;
       if (updatedUser) {
         console.log('✅ Email doğrulandı, güncel user bilgileri:', updatedUser);
+      } else {
+        console.log('ℹ️ Email doğrulandı, ancak user bilgileri alınamadı (concurrency hatası olabilir, normal)');
       }
       
       // Eğer kullanıcı zaten giriş yapmışsa, profil bilgilerini yenile ve profil sayfasına yönlendir
@@ -119,12 +124,13 @@ const VerifyEmail = () => {
         // Kullanıcı bilgilerini zorunlu olarak yenile (email doğrulama durumunu güncellemek için)
         try {
           // Biraz bekle ki backend'deki değişiklik kaydedilsin
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 1000));
           await fetchUserProfile();
           console.log('✅ Profil bilgileri yenilendi');
         } catch (profileError) {
           // Profil yenileme hatası success'i etkilemesin
-          console.error('❌ Profil bilgileri yenilenirken hata:', profileError);
+          console.error('⚠️ Profil bilgileri yenilenirken hata (normal olabilir):', profileError);
+          // Hata olsa bile email doğrulandı, bu yüzden devam et
         }
         setTimeout(() => {
           navigate('/profile', { replace: true });

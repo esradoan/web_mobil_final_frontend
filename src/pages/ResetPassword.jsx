@@ -28,16 +28,14 @@ const ResetPassword = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  const email = searchParams.get('email') || '';
-  
-  // Token'ı URL'den al ve decode et
-  // useSearchParams bazen token'ı decode etmeyebilir, bu yüzden manuel decode yapıyoruz
+  // Token'ı URL'den al - önce window.location.href'den dene (daha güvenilir)
+  let email = searchParams.get('email') || '';
   let token = searchParams.get('token') || '';
   
-  // Eğer token boşsa, URL'den direkt al
-  if (!token) {
+  // Eğer searchParams'tan token alınamazsa, window.location.href'den dene
+  if (!token || token.length < 10) {
     try {
-      const urlParams = new URL(window.location.href).searchParams;
+      const urlParams = new URLSearchParams(window.location.search);
       token = urlParams.get('token') || '';
     } catch (e) {
       console.error('Error getting token from URL:', e);
@@ -45,7 +43,6 @@ const ResetPassword = () => {
   }
   
   // Token'ı decode et (URL encoded karakterler varsa)
-  // Token'da % karakteri varsa, decode etmemiz gerekiyor
   if (token && token.includes('%')) {
     try {
       // decodeURIComponent ile decode et
@@ -57,6 +54,15 @@ const ResetPassword = () => {
     }
   } else if (token) {
     console.log('ℹ️ Token does not contain % - already decoded or not encoded');
+  }
+
+  // Email'i de decode et
+  if (email && email.includes('%')) {
+    try {
+      email = decodeURIComponent(email);
+    } catch (e) {
+      console.error('❌ Email decode failed:', e);
+    }
   }
 
   const {
@@ -76,6 +82,16 @@ const ResetPassword = () => {
   useEffect(() => {
     if (email) setValue('email', email);
     if (token) setValue('token', token);
+    
+    // Debug: Token bilgilerini console'a yazdır
+    if (token) {
+      console.log('🔍 Reset Password Debug:');
+      console.log('   Email:', email);
+      console.log('   Token (first 50 chars):', token.substring(0, Math.min(50, token.length)) + '...');
+      console.log('   Token (last 50 chars):', '...' + token.substring(Math.max(0, token.length - 50)));
+      console.log('   Token length:', token.length);
+      console.log('   Full URL:', window.location.href);
+    }
   }, [email, token, setValue]);
 
   const password = watch('newPassword');
@@ -107,40 +123,32 @@ const ResetPassword = () => {
     setSuccess(false);
     setLoading(true);
 
+    // Debug: Gönderilecek verileri logla
+    console.log('🔑 Submitting reset password request:');
+    console.log('   Email:', data.email);
+    console.log('   Token length:', data.token?.length || 0);
+    console.log('   Token (first 50):', data.token?.substring(0, Math.min(50, data.token?.length || 0)) + '...');
+    console.log('   New Password length:', data.newPassword?.length || 0);
+    console.log('   Passwords match:', data.newPassword === data.confirmPassword);
+
     try {
-      // Token'ı decode edilmiş halde gönder
-      // Backend tekrar decode edecek ama önce frontend'de decode etmeliyiz
-      const tokenToSend = data.token;
-      
-      console.log('📤 Sending reset password request:');
-      console.log('   Email:', data.email);
-      console.log('   Token length:', tokenToSend.length);
-      console.log('   Token (first 30):', tokenToSend.substring(0, 30));
-      console.log('   Token (last 30):', '...' + tokenToSend.substring(Math.max(0, tokenToSend.length - 30)));
-      console.log('   Token contains %:', tokenToSend.includes('%'));
-      console.log('   Token contains +:', tokenToSend.includes('+'));
-      console.log('   Token contains /:', tokenToSend.includes('/'));
-      console.log('   Token contains =:', tokenToSend.includes('='));
-      
-      await api.post('/auth/reset-password', {
+      const response = await api.post('/auth/reset-password', {
         email: data.email,
-        token: tokenToSend, // Decode edilmiş token'ı gönder
+        token: data.token,
         newPassword: data.newPassword,
         confirmPassword: data.confirmPassword,
       });
       
+      console.log('✅ Reset password successful:', response.data);
       setSuccess(true);
-      setError('');
       setTimeout(() => {
         navigate('/login');
       }, 2000);
     } catch (err) {
-      setSuccess(false);
-      const errorMessage = err.response?.data?.message || 
-                          err.response?.data?.Message ||
-                          'Şifre sıfırlama başarısız';
-      setError(errorMessage);
+      const errorMessage = err.response?.data?.message || err.message || 'Şifre sıfırlama başarısız';
       console.error('❌ Reset password error:', errorMessage);
+      console.error('   Full error:', err.response?.data);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
