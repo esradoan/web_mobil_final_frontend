@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -25,10 +25,24 @@ const Login = () => {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(loginSchema),
   });
+
+  // Sayfa yüklendiğinde localStorage'dan email ve şifreyi oku
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    const savedPassword = localStorage.getItem('rememberedPassword');
+    const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
+
+    if (savedEmail && savedPassword && savedRememberMe) {
+      setValue('email', savedEmail);
+      setValue('password', savedPassword);
+      setValue('rememberMe', true);
+    }
+  }, [setValue]);
 
   const onSubmit = async (data) => {
     setError('');
@@ -37,6 +51,18 @@ const Login = () => {
     const result = await login(data.email, data.password, data.rememberMe || false);
     
     if (result.success) {
+      // Eğer "Beni Hatırla" işaretliyse, email ve şifreyi localStorage'a kaydet
+      if (data.rememberMe) {
+        localStorage.setItem('rememberedEmail', data.email);
+        localStorage.setItem('rememberedPassword', data.password);
+        localStorage.setItem('rememberMe', 'true');
+      } else {
+        // Eğer işaretli değilse, localStorage'dan temizle
+        localStorage.removeItem('rememberedEmail');
+        localStorage.removeItem('rememberedPassword');
+        localStorage.removeItem('rememberMe');
+      }
+      
       navigate('/dashboard');
     } else {
       setError(result.error || 'Giriş başarısız');
