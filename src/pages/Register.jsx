@@ -1,28 +1,51 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
-import { Mail, Lock, User, UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
+import { Mail, Lock, User, UserPlus, AlertCircle, CheckCircle, GraduationCap, BookOpen } from 'lucide-react';
 import ParticleBackground from '../components/ParticleBackground';
 import GlassCard from '../components/GlassCard';
 import GradientOrb from '../components/GradientOrb';
+import api from '../config/api';
 
 const registerSchema = z.object({
   firstName: z.string().min(2, 'Ad en az 2 karakter olmalıdır'),
   lastName: z.string().min(2, 'Soyad en az 2 karakter olmalıdır'),
   email: z.string().email('Geçerli bir email adresi giriniz'),
+  role: z.enum(['Student', 'Faculty'], {
+    required_error: 'Lütfen bir rol seçiniz',
+  }),
   password: z.string()
     .min(8, 'Şifre en az 8 karakter olmalıdır')
     .regex(/[A-Z]/, 'Şifre en az bir büyük harf içermelidir')
     .regex(/[a-z]/, 'Şifre en az bir küçük harf içermelidir')
     .regex(/[0-9]/, 'Şifre en az bir rakam içermelidir'),
   confirmPassword: z.string(),
+  studentNumber: z.string().optional(),
+  employeeNumber: z.string().optional(),
+  departmentId: z.number().min(1, 'Lütfen bir bölüm seçiniz'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Şifreler eşleşmiyor',
   path: ['confirmPassword'],
+}).refine((data) => {
+  if (data.role === 'Student') {
+    return data.studentNumber && data.studentNumber.trim().length > 0;
+  }
+  return true;
+}, {
+  message: 'Öğrenci numarası gereklidir',
+  path: ['studentNumber'],
+}).refine((data) => {
+  if (data.role === 'Faculty') {
+    return data.employeeNumber && data.employeeNumber.trim().length > 0;
+  }
+  return true;
+}, {
+  message: 'Personel numarası gereklidir',
+  path: ['employeeNumber'],
 });
 
 const Register = () => {
@@ -31,6 +54,8 @@ const Register = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [departments, setDepartments] = useState([]);
+  const [loadingDepartments, setLoadingDepartments] = useState(true);
 
   const {
     register,
@@ -39,9 +64,38 @@ const Register = () => {
     watch,
   } = useForm({
     resolver: zodResolver(registerSchema),
+    defaultValues: {
+      role: 'Student',
+    },
   });
 
   const password = watch('password');
+  const selectedRole = watch('role');
+
+  // Fetch departments on component mount
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        setLoadingDepartments(true);
+        setError(''); // Clear previous errors
+        const response = await api.get('/departments');
+        if (response.data && Array.isArray(response.data)) {
+          setDepartments(response.data);
+        } else {
+          setDepartments([]);
+        }
+      } catch (err) {
+        console.error('Departments yüklenemedi:', err);
+        const errorMessage = err.response?.data?.message || err.message || 'Bilinmeyen hata';
+        setError(`Bölümler yüklenemedi: ${errorMessage}. Lütfen sayfayı yenileyin veya backend'in çalıştığından emin olun.`);
+        setDepartments([]); // Set empty array on error
+      } finally {
+        setLoadingDepartments(false);
+      }
+    };
+
+    fetchDepartments();
+  }, []);
 
   const getPasswordStrength = (pwd) => {
     if (!pwd) return { strength: 0, label: '', color: '' };
@@ -71,18 +125,29 @@ const Register = () => {
     setLoading(true);
 
     // Backend'e uygun format (C# property naming: PascalCase)
-    // Backend Student için StudentNumber ve DepartmentId istiyor
-    // Şimdilik test için geçici değerler gönderiyoruz
+    // Role mapping: Student = 2, Faculty = 1, Admin = 0
+    const roleMapping = {
+      'Student': 2,
+      'Faculty': 1,
+      'Admin': 0
+    };
+
     const registerData = {
       FirstName: data.firstName,
       LastName: data.lastName,
       Email: data.email,
       Password: data.password,
       ConfirmPassword: data.confirmPassword,
-      Role: 2, // Student role (0=Admin, 1=Faculty, 2=Student)
-      StudentNumber: `STU${Date.now()}`, // Geçici öğrenci numarası
-      DepartmentId: 1, // Geçici department ID (backend'de olması gerekiyor)
+      Role: roleMapping[data.role] || 2,
+      DepartmentId: data.departmentId,
     };
+
+    // Role'e göre ek alanlar
+    if (data.role === 'Student') {
+      registerData.StudentNumber = data.studentNumber;
+    } else if (data.role === 'Faculty') {
+      registerData.EmployeeNumber = data.employeeNumber;
+    }
     
     const result = await registerUser(registerData);
 
@@ -273,6 +338,168 @@ const Register = () => {
               {errors.email && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">
                   {errors.email.message}
+                </p>
+              )}
+            </motion.div>
+
+            {/* Role Selection */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.55 }}
+            >
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Rol Seçiniz
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <motion.label
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                    selectedRole === 'Student'
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-primary-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    value="Student"
+                    {...register('role')}
+                    className="sr-only"
+                  />
+                  <GraduationCap className={`w-5 h-5 mr-2 ${
+                    selectedRole === 'Student' ? 'text-primary-600 dark:text-primary-400' : 'text-slate-400'
+                  }`} />
+                  <span className={`font-medium ${
+                    selectedRole === 'Student' ? 'text-primary-700 dark:text-primary-300' : 'text-slate-700 dark:text-slate-300'
+                  }`}>
+                    Öğrenci
+                  </span>
+                </motion.label>
+                <motion.label
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`relative flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                    selectedRole === 'Faculty'
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-primary-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    value="Faculty"
+                    {...register('role')}
+                    className="sr-only"
+                  />
+                  <BookOpen className={`w-5 h-5 mr-2 ${
+                    selectedRole === 'Faculty' ? 'text-primary-600 dark:text-primary-400' : 'text-slate-400'
+                  }`} />
+                  <span className={`font-medium ${
+                    selectedRole === 'Faculty' ? 'text-primary-700 dark:text-primary-300' : 'text-slate-700 dark:text-slate-300'
+                  }`}>
+                    Öğretim Üyesi
+                  </span>
+                </motion.label>
+              </div>
+              {errors.role && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                  {errors.role.message}
+                </p>
+              )}
+            </motion.div>
+
+            {/* Student Number (only for Student) */}
+            {selectedRole === 'Student' && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Öğrenci Numarası
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input
+                    type="text"
+                    {...register('studentNumber')}
+                    className="input-field pl-10"
+                    placeholder="Örn: 20210012345"
+                  />
+                </div>
+                {errors.studentNumber && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {errors.studentNumber.message}
+                  </p>
+                )}
+              </motion.div>
+            )}
+
+            {/* Employee Number (only for Faculty) */}
+            {selectedRole === 'Faculty' && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Personel Numarası
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <input
+                    type="text"
+                    {...register('employeeNumber')}
+                    className="input-field pl-10"
+                    placeholder="Örn: EMP001234"
+                  />
+                </div>
+                {errors.employeeNumber && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {errors.employeeNumber.message}
+                  </p>
+                )}
+              </motion.div>
+            )}
+
+            {/* Department Selection */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.6 }}
+            >
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Bölüm
+              </label>
+              <div className="relative">
+                <select
+                  {...register('departmentId', { valueAsNumber: true })}
+                  className="input-field appearance-none pr-10"
+                  disabled={loadingDepartments}
+                >
+                  <option value="">Bölüm seçiniz...</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name} ({dept.code}) - {dept.facultyName}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                  <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+              {loadingDepartments && (
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Bölümler yükleniyor...
+                </p>
+              )}
+              {errors.departmentId && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                  {errors.departmentId.message}
                 </p>
               )}
             </motion.div>

@@ -8,7 +8,12 @@ import {
   Menu, 
   X,
   Bell,
-  Settings
+  Settings,
+  Shield,
+  BookOpen,
+  GraduationCap,
+  ClipboardCheck,
+  MapPin
 } from 'lucide-react';
 import { useState } from 'react';
 import { getUserProfilePicture } from '../utils/imageUtils';
@@ -24,9 +29,29 @@ const Layout = ({ children }) => {
     navigate('/login');
   };
 
+  // Check user role
+  const isAdmin = user?.role === 'Admin' || user?.Role === 'Admin' || user?.role === 0 || user?.Role === 0;
+  const isStudent = user?.role === 'Student' || user?.Role === 'Student' || user?.role === 2 || user?.Role === 2;
+  const isFaculty = user?.role === 'Faculty' || user?.Role === 'Faculty' || user?.role === 1 || user?.Role === 1;
+
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/profile', label: 'Profil', icon: User },
+    // Academic Management (All authenticated users)
+    { path: '/courses', label: 'Dersler', icon: BookOpen },
+    // Student specific
+    ...(isStudent ? [
+      { path: '/my-courses', label: 'Derslerim', icon: GraduationCap },
+      { path: '/grades', label: 'Notlarım', icon: ClipboardCheck },
+      { path: '/my-attendance', label: 'Yoklamalarım', icon: MapPin },
+    ] : []),
+    // Faculty specific
+    ...(isFaculty ? [
+      { path: '/attendance/start', label: 'Yoklama Başlat', icon: MapPin },
+      { path: '/excuse-requests', label: 'Mazeretler', icon: ClipboardCheck },
+    ] : []),
+    // Admin
+    ...(isAdmin ? [{ path: '/admin', label: 'Admin Paneli', icon: Shield }] : []),
   ];
 
   return (
