@@ -8,15 +8,9 @@ import {
   Menu, 
   X,
   Bell,
-  Settings,
-  Shield,
-  BookOpen,
-  GraduationCap,
-  ClipboardCheck,
-  MapPin
+  Settings
 } from 'lucide-react';
 import { useState } from 'react';
-import { getUserProfilePicture } from '../utils/imageUtils';
 
 const Layout = ({ children }) => {
   const { user, logout } = useAuth();
@@ -29,29 +23,9 @@ const Layout = ({ children }) => {
     navigate('/login');
   };
 
-  // Check user role
-  const isAdmin = user?.role === 'Admin' || user?.Role === 'Admin' || user?.role === 0 || user?.Role === 0;
-  const isStudent = user?.role === 'Student' || user?.Role === 'Student' || user?.role === 2 || user?.Role === 2;
-  const isFaculty = user?.role === 'Faculty' || user?.Role === 'Faculty' || user?.role === 1 || user?.Role === 1;
-
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/profile', label: 'Profil', icon: User },
-    // Academic Management (All authenticated users)
-    { path: '/courses', label: 'Dersler', icon: BookOpen },
-    // Student specific
-    ...(isStudent ? [
-      { path: '/my-courses', label: 'Derslerim', icon: GraduationCap },
-      { path: '/grades', label: 'Notlarım', icon: ClipboardCheck },
-      { path: '/my-attendance', label: 'Yoklamalarım', icon: MapPin },
-    ] : []),
-    // Faculty specific
-    ...(isFaculty ? [
-      { path: '/attendance/start', label: 'Yoklama Başlat', icon: MapPin },
-      { path: '/excuse-requests', label: 'Mazeretler', icon: ClipboardCheck },
-    ] : []),
-    // Admin
-    ...(isAdmin ? [{ path: '/admin', label: 'Admin Paneli', icon: Shield }] : []),
   ];
 
   return (
@@ -104,31 +78,13 @@ const Layout = ({ children }) => {
 
           {/* User Info & Logout */}
           <div className="p-4 border-t border-slate-200 dark:border-slate-700">
-            <div className="mb-4 p-3 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center gap-3">
-              {/* Profile Picture */}
-              <div className="relative flex-shrink-0">
-                {getUserProfilePicture(user) ? (
-                  <img
-                    src={getUserProfilePicture(user)}
-                    alt="Profile"
-                    className="w-10 h-10 rounded-full object-cover border-2 border-primary-500"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
-                    {user?.firstName?.[0] || user?.FirstName?.[0]}
-                    {user?.lastName?.[0] || user?.LastName?.[0]}
-                  </div>
-                )}
-              </div>
-              {/* User Info */}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                  {user?.firstName || user?.FirstName} {user?.lastName || user?.LastName}
-                </p>
-                <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
-                  {user?.email || user?.Email}
-                </p>
-              </div>
+            <div className="mb-4 p-3 bg-slate-100 dark:bg-slate-700 rounded-lg">
+              <p className="text-sm font-medium text-slate-900 dark:text-white">
+                {user?.firstName} {user?.lastName}
+              </p>
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                {user?.email}
+              </p>
             </div>
             <button
               onClick={handleLogout}
@@ -193,32 +149,6 @@ const Layout = ({ children }) => {
               })}
             </nav>
             <div className="p-4 border-t border-slate-200 dark:border-slate-700">
-              <div className="mb-4 p-3 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center gap-3">
-                {/* Profile Picture */}
-                <div className="relative flex-shrink-0">
-                  {getUserProfilePicture(user) ? (
-                    <img
-                      src={getUserProfilePicture(user)}
-                      alt="Profile"
-                      className="w-10 h-10 rounded-full object-cover border-2 border-primary-500"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
-                      {user?.firstName?.[0] || user?.FirstName?.[0]}
-                      {user?.lastName?.[0] || user?.LastName?.[0]}
-                    </div>
-                  )}
-                </div>
-                {/* User Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                    {user?.firstName || user?.FirstName} {user?.lastName || user?.LastName}
-                  </p>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
-                    {user?.email || user?.Email}
-                  </p>
-                </div>
-              </div>
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
