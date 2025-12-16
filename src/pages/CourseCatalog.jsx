@@ -2,18 +2,21 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Layout from '../components/Layout';
-import { Search, Filter, BookOpen, GraduationCap, ChevronRight } from 'lucide-react';
+import { Search, Filter, BookOpen, GraduationCap, ChevronRight, AlertCircle, CheckCircle, Globe } from 'lucide-react';
 import AnimatedCard from '../components/AnimatedCard';
 import GlassCard from '../components/GlassCard';
 import api from '../config/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const CourseCatalog = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [courses, setCourses] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [courseTypeFilter, setCourseTypeFilter] = useState('all'); // 'all', 'required', 'elective', 'generalElective'
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 20,
@@ -24,7 +27,7 @@ const CourseCatalog = () => {
   useEffect(() => {
     fetchDepartments();
     fetchCourses();
-  }, [pagination.page, searchTerm, selectedDepartment]);
+  }, [pagination.page, searchTerm, selectedDepartment, courseTypeFilter]);
 
   const fetchDepartments = async () => {
     try {
@@ -51,36 +54,29 @@ const CourseCatalog = () => {
         params.departmentId = selectedDepartment;
       }
 
+      // Note: Course type filtering can be done on frontend or backend
+      // For now, we'll filter on frontend after fetching
       const response = await api.get('/courses', { params });
-      setCourses(response.data?.data || []);
+      let filteredCourses = response.data?.data || [];
+      
+      // Filter by course type on frontend
+      if (courseTypeFilter !== 'all') {
+        filteredCourses = filteredCourses.filter(course => {
+          const courseType = course.type?.toLowerCase() || 'required';
+          return courseType === courseTypeFilter.toLowerCase();
+        });
+      }
+      
+      setCourses(filteredCourses);
       setPagination(prev => ({
         ...prev,
-        total: response.data?.pagination?.total || 0,
-        totalPages: response.data?.pagination?.totalPages || 0,
+        total: response.data?.pagination?.total || filteredCourses.length,
+        totalPages: response.data?.pagination?.totalPages || Math.ceil(filteredCourses.length / prev.limit),
       }));
     } catch (error) {
       console.error('Courses yüklenemedi:', error);
-      // Mock data for development
-      setCourses([
-        {
-          id: 1,
-          code: 'CENG101',
-          name: 'Introduction to Computer Engineering',
-          description: 'Fundamental concepts of computer engineering...',
-          credits: 3,
-          ects: 5,
-          department: { id: 1, name: 'Bilgisayar Mühendisliği', code: 'CENG' },
-        },
-        {
-          id: 2,
-          code: 'CENG201',
-          name: 'Data Structures',
-          description: 'Arrays, linked lists, trees, graphs...',
-          credits: 4,
-          ects: 6,
-          department: { id: 1, name: 'Bilgisayar Mühendisliği', code: 'CENG' },
-        },
-      ]);
+      toast.error('Dersler yüklenemedi');
+      setCourses([]);
     } finally {
       setLoading(false);
     }
@@ -150,6 +146,24 @@ const CourseCatalog = () => {
                   </select>
                 </div>
 
+                {/* Course Type Filter */}
+                <div className="relative md:w-48">
+                  <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <select
+                    value={courseTypeFilter}
+                    onChange={(e) => {
+                      setCourseTypeFilter(e.target.value);
+                      setPagination(prev => ({ ...prev, page: 1 }));
+                    }}
+                    className="input-field pl-10 appearance-none pr-10 w-full"
+                  >
+                    <option value="all">Tüm Ders Tipleri</option>
+                    <option value="required">Zorunlu Dersler</option>
+                    <option value="elective">Seçmeli Dersler</option>
+                    <option value="generalElective">Genel Seçmeli Dersler</option>
+                  </select>
+                </div>
+
                 <motion.button
                   type="submit"
                   whileHover={{ scale: 1.05 }}
@@ -194,13 +208,35 @@ const CourseCatalog = () => {
                   >
                     {/* Course Code & Name */}
                     <div className="mb-4">
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <div className="p-2 rounded-lg bg-gradient-to-br from-primary-500 to-purple-600">
                           <BookOpen className="w-5 h-5 text-white" />
                         </div>
                         <span className="font-mono font-bold text-primary-600 dark:text-primary-400">
                           {course.code}
                         </span>
+                        {/* Course Type Badge */}
+                        {course.type && (
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold ${
+                            course.type === 'Required'
+                              ? 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                              : course.type === 'Elective'
+                              ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
+                              : 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                          }`}>
+                            {course.type === 'Required' && <CheckCircle className="w-3 h-3" />}
+                            {course.type === 'Elective' && <BookOpen className="w-3 h-3" />}
+                            {course.type === 'GeneralElective' && <Globe className="w-3 h-3" />}
+                            {course.type === 'Required' ? 'Zorunlu' : course.type === 'Elective' ? 'Seçmeli' : 'Genel Seçmeli'}
+                          </span>
+                        )}
+                        {/* Cross-Department Warning */}
+                        {user?.role === 'Student' && course.department?.id !== user?.departmentId && !course.allowCrossDepartment && course.type !== 'GeneralElective' && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400">
+                            <AlertCircle className="w-3 h-3" />
+                            Farklı Bölüm
+                          </span>
+                        )}
                       </div>
                       <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">
                         {course.name}

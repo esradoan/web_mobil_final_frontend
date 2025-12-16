@@ -20,9 +20,12 @@ const ExcuseRequests = () => {
     try {
       setLoading(true);
       const response = await api.get('/attendance/excuse-requests');
-      setRequests(response.data || []);
+      const requestsData = response.data?.data || response.data || [];
+      setRequests(requestsData);
     } catch (error) {
       console.error('Mazeret talepleri yüklenemedi:', error);
+      toast.error('Mazeret talepleri yüklenemedi');
+      setRequests([]);
     } finally {
       setLoading(false);
     }
@@ -35,7 +38,9 @@ const ExcuseRequests = () => {
       toast.success('Mazeret onaylandı');
       fetchRequests();
     } catch (error) {
-      toast.error('Mazeret onaylanamadı');
+      console.error('Approve error:', error);
+      const errorMessage = error.response?.data?.message || 'Mazeret onaylanamadı';
+      toast.error(errorMessage);
     } finally {
       setProcessing(prev => ({ ...prev, [requestId]: false }));
     }
@@ -48,7 +53,9 @@ const ExcuseRequests = () => {
       toast.success('Mazeret reddedildi');
       fetchRequests();
     } catch (error) {
-      toast.error('Mazeret reddedilemedi');
+      console.error('Reject error:', error);
+      const errorMessage = error.response?.data?.message || 'Mazeret reddedilemedi';
+      toast.error(errorMessage);
     } finally {
       setProcessing(prev => ({ ...prev, [requestId]: false }));
     }

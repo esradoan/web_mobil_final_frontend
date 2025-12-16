@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Layout from '../components/Layout';
-import { BookOpen, Download, TrendingUp, Award } from 'lucide-react';
+import { BookOpen, Download, TrendingUp, Award, BarChart3, LineChart } from 'lucide-react';
 import AnimatedCard from '../components/AnimatedCard';
 import GlassCard from '../components/GlassCard';
 import api from '../config/api';
 import toast from 'react-hot-toast';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart as RechartsLineChart, Line } from 'recharts';
 
 const Grades = () => {
   const [grades, setGrades] = useState([]);
@@ -21,23 +22,16 @@ const Grades = () => {
     try {
       setLoading(true);
       const response = await api.get('/grades/my-grades');
-      setGrades(response.data?.data || []);
-      setGpa(response.data?.gpa || 0);
-      setCgpa(response.data?.cgpa || 0);
+      const gradesData = response.data?.data || response.data || [];
+      setGrades(Array.isArray(gradesData) ? gradesData : []);
+      setGpa(response.data?.gpa || response.data?.Gpa || 0);
+      setCgpa(response.data?.cgpa || response.data?.Cgpa || 0);
     } catch (error) {
       console.error('Notlar yüklenemedi:', error);
-      // Mock data
-      setGrades([
-        {
-          course: { code: 'CENG101', name: 'Introduction to Computer Engineering' },
-          midtermGrade: 75.5,
-          finalGrade: 82.0,
-          letterGrade: 'B+',
-          gradePoint: 3.3,
-        },
-      ]);
-      setGpa(3.45);
-      setCgpa(3.52);
+      toast.error('Notlar yüklenemedi');
+      setGrades([]);
+      setGpa(0);
+      setCgpa(0);
     } finally {
       setLoading(false);
     }
@@ -64,11 +58,43 @@ const Grades = () => {
   };
 
   const getGradeColor = (letterGrade) => {
-    if (['A', 'A+'].includes(letterGrade)) return 'text-green-600 dark:text-green-400';
-    if (['B+', 'B'].includes(letterGrade)) return 'text-blue-600 dark:text-blue-400';
-    if (['C+', 'C'].includes(letterGrade)) return 'text-yellow-600 dark:text-yellow-400';
-    if (['D'].includes(letterGrade)) return 'text-orange-600 dark:text-orange-400';
+    if (['AA'].includes(letterGrade)) return 'text-green-600 dark:text-green-400';
+    if (['BA', 'BB'].includes(letterGrade)) return 'text-blue-600 dark:text-blue-400';
+    if (['CB', 'CC'].includes(letterGrade)) return 'text-yellow-600 dark:text-yellow-400';
+    if (['DC', 'DD'].includes(letterGrade)) return 'text-orange-600 dark:text-orange-400';
+    if (['FD'].includes(letterGrade)) return 'text-red-500 dark:text-red-400';
     return 'text-red-600 dark:text-red-400';
+  };
+
+  // Grade Distribution Data
+  const getGradeDistribution = () => {
+    const distribution = {
+      'AA': 0, 'BA': 0, 'BB': 0, 'CB': 0,
+      'CC': 0, 'DC': 0, 'DD': 0, 'FD': 0, 'FF': 0
+    };
+    
+    grades.forEach(grade => {
+      if (grade.letterGrade && distribution.hasOwnProperty(grade.letterGrade)) {
+        distribution[grade.letterGrade]++;
+      }
+    });
+
+    return Object.entries(distribution).map(([grade, count]) => ({
+      grade,
+      count
+    })).filter(item => item.count > 0);
+  };
+
+  // GPA Trend Data (mock - backend'den gelecek)
+  const getGpaTrend = () => {
+    // Backend'den semester bazlı GPA verisi gelirse kullanılacak
+    // Şimdilik mock data
+    return [
+      { semester: 'Fall 2023', gpa: 3.2, cgpa: 3.2 },
+      { semester: 'Spring 2024', gpa: 3.4, cgpa: 3.3 },
+      { semester: 'Fall 2024', gpa: 3.5, cgpa: 3.4 },
+      { semester: 'Spring 2025', gpa: gpa, cgpa: cgpa },
+    ];
   };
 
   return (
@@ -126,6 +152,96 @@ const Grades = () => {
           </AnimatedCard>
         </div>
 
+        {/* Charts */}
+        {!loading && grades.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Grade Distribution Chart */}
+            <AnimatedCard delay={0.3}>
+              <GlassCard className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <BarChart3 className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                    Not Dağılımı
+                  </h2>
+                </div>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={getGradeDistribution()}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#64748b" opacity={0.3} />
+                    <XAxis 
+                      dataKey="grade" 
+                      stroke="#64748b"
+                      tick={{ fill: '#64748b' }}
+                    />
+                    <YAxis 
+                      stroke="#64748b"
+                      tick={{ fill: '#64748b' }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <Bar dataKey="count" fill="#6366f1" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </GlassCard>
+            </AnimatedCard>
+
+            {/* GPA Trend Chart */}
+            <AnimatedCard delay={0.4}>
+              <GlassCard className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <LineChart className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                    GPA Trendi
+                  </h2>
+                </div>
+                <ResponsiveContainer width="100%" height={300}>
+                  <RechartsLineChart data={getGpaTrend()}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#64748b" opacity={0.3} />
+                    <XAxis 
+                      dataKey="semester" 
+                      stroke="#64748b"
+                      tick={{ fill: '#64748b' }}
+                    />
+                    <YAxis 
+                      stroke="#64748b"
+                      tick={{ fill: '#64748b' }}
+                      domain={[0, 4]}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <Legend />
+                    <Line 
+                      type="monotone" 
+                      dataKey="gpa" 
+                      stroke="#6366f1" 
+                      strokeWidth={2}
+                      name="Dönem GPA"
+                      dot={{ r: 5 }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="cgpa" 
+                      stroke="#8b5cf6" 
+                      strokeWidth={2}
+                      name="Genel GPA"
+                      dot={{ r: 5 }}
+                    />
+                  </RechartsLineChart>
+                </ResponsiveContainer>
+              </GlassCard>
+            </AnimatedCard>
+          </div>
+        )}
+
         {/* Grades List */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
@@ -145,7 +261,7 @@ const Grades = () => {
             </GlassCard>
           </AnimatedCard>
         ) : (
-          <AnimatedCard delay={0.3}>
+          <AnimatedCard delay={0.5}>
             <GlassCard className="p-6">
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -164,7 +280,7 @@ const Grades = () => {
                         key={index}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 + index * 0.05 }}
+                        transition={{ delay: 0.5 + index * 0.05 }}
                         className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                       >
                         <td className="py-4 px-4">

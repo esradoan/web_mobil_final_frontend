@@ -1,19 +1,15 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { BookOpen, AlertCircle, CheckCircle, XCircle, FileText, QrCode, Clock, MapPin, X, Upload } from 'lucide-react';
+import { BookOpen, AlertCircle, CheckCircle, XCircle, FileText, TrendingUp, X, Upload } from 'lucide-react';
 import AnimatedCard from '../components/AnimatedCard';
 import GlassCard from '../components/GlassCard';
 import api from '../config/api';
 import toast from 'react-hot-toast';
 
-const MyAttendance = () => {
-  const navigate = useNavigate();
+const AttendanceStatus = () => {
   const [attendance, setAttendance] = useState([]);
-  const [activeSessions, setActiveSessions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [sessionsLoading, setSessionsLoading] = useState(true);
   const [showExcuseModal, setShowExcuseModal] = useState(false);
   const [selectedAttendance, setSelectedAttendance] = useState(null);
   const [excuseReason, setExcuseReason] = useState('');
@@ -22,7 +18,6 @@ const MyAttendance = () => {
 
   useEffect(() => {
     fetchAttendance();
-    fetchActiveSessions();
   }, []);
 
   const fetchAttendance = async () => {
@@ -40,25 +35,9 @@ const MyAttendance = () => {
     }
   };
 
-  const fetchActiveSessions = async () => {
-    try {
-      setSessionsLoading(true);
-      const response = await api.get('/attendance/sessions/active');
-      const sessions = response.data?.data || response.data || [];
-      setActiveSessions(Array.isArray(sessions) ? sessions : []);
-      console.log('✅ Active sessions loaded:', Array.isArray(sessions) ? sessions.length : 0);
-    } catch (error) {
-      console.error('❌ Aktif oturumlar yüklenemedi:', error);
-      toast.error('Aktif oturumlar yüklenemedi');
-      setActiveSessions([]);
-    } finally {
-      setSessionsLoading(false);
-    }
-  };
-
   const getStatus = (percentage) => {
     if (percentage >= 80) {
-      return { status: 'OK', icon: CheckCircle, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/20' };
+      return { status: 'İyi', icon: CheckCircle, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/20' };
     } else if (percentage >= 60) {
       return { status: 'Uyarı', icon: AlertCircle, color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-900/20' };
     } else {
@@ -137,10 +116,10 @@ const MyAttendance = () => {
           animate={{ opacity: 1, y: 0 }}
         >
           <h1 className="text-4xl font-bold gradient-text mb-2">
-            Yoklamalarım
+            Devamsızlık Bilgisi
           </h1>
           <p className="text-slate-600 dark:text-slate-400">
-            Ders bazında yoklama istatistikleriniz
+            Ders bazında devamsızlık istatistikleriniz
           </p>
         </motion.div>
 
@@ -211,7 +190,7 @@ const MyAttendance = () => {
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                          Yoklama Yüzdesi
+                          Devamsızlık Yüzdesi
                         </span>
                         <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                           {(item.attendancePercentage || 0).toFixed(1)}%
@@ -252,64 +231,7 @@ const MyAttendance = () => {
           </div>
         )}
 
-        {/* Active Sessions Section */}
-        {activeSessions.length > 0 && (
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">
-              Aktif Yoklama Oturumları
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {activeSessions.map((session, index) => (
-                <AnimatedCard key={session.id || index} delay={index * 0.1}>
-                  <GlassCard className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-mono font-bold text-primary-600 dark:text-primary-400">
-                            {session.courseCode || session.section?.course?.code || 'N/A'}
-                          </span>
-                          {session.section?.sectionNumber && (
-                            <span className="px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 rounded-lg text-xs font-semibold">
-                              Section {session.section.sectionNumber}
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="font-bold text-slate-900 dark:text-white mb-1">
-                          {session.courseName || session.section?.course?.name || 'Ders Adı'}
-                        </h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                          {new Date(session.date).toLocaleDateString('tr-TR')} | {session.startTime} - {session.endTime}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <motion.button
-                        onClick={() => navigate(`/attendance/give/${session.id}`)}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="flex-1 btn-primary flex items-center justify-center gap-2 text-sm"
-                      >
-                        <MapPin className="w-4 h-4" />
-                        GPS ile Yoklama
-                      </motion.button>
-                      <motion.button
-                        onClick={() => navigate(`/attendance/qr/${session.id}`)}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="btn-secondary flex items-center justify-center gap-2 text-sm"
-                      >
-                        <QrCode className="w-4 h-4" />
-                        QR Kod
-                      </motion.button>
-                    </div>
-                  </GlassCard>
-                </AnimatedCard>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Excuse Request Modal */}
+        {/* Excuse Request Modal - Same as before */}
         {showExcuseModal && selectedAttendance && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <motion.div
@@ -331,7 +253,7 @@ const MyAttendance = () => {
                   }}
                   className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 >
-                  <X className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                  <XCircle className="w-5 h-5 text-slate-600 dark:text-slate-400" />
                 </button>
               </div>
 
@@ -374,36 +296,6 @@ const MyAttendance = () => {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Belge (Opsiyonel)
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <label className="flex-1 cursor-pointer">
-                      <input
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png"
-                        onChange={(e) => setExcuseDocument(e.target.files?.[0] || null)}
-                        className="hidden"
-                      />
-                      <div className="flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                        <Upload className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                        <span className="text-sm text-slate-600 dark:text-slate-400">
-                          {excuseDocument ? excuseDocument.name : 'Belge Seç'}
-                        </span>
-                      </div>
-                    </label>
-                    {excuseDocument && (
-                      <button
-                        onClick={() => setExcuseDocument(null)}
-                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
                 <div className="flex gap-2 pt-4">
                   <motion.button
                     onClick={() => {
@@ -442,5 +334,5 @@ const MyAttendance = () => {
   );
 };
 
-export default MyAttendance;
+export default AttendanceStatus;
 

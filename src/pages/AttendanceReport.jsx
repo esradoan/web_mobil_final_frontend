@@ -21,9 +21,11 @@ const AttendanceReport = () => {
     try {
       setLoading(true);
       const response = await api.get(`/attendance/report/${sectionId}`);
-      setReport(response.data);
+      setReport(response.data?.data || response.data);
     } catch (error) {
       console.error('Rapor yüklenemedi:', error);
+      toast.error('Yoklama raporu yüklenemedi');
+      setReport(null);
     } finally {
       setLoading(false);
     }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Layout from '../components/Layout';
-import { MapPin, CheckCircle, AlertCircle, Navigation } from 'lucide-react';
+import { MapPin, CheckCircle, AlertCircle, Navigation, QrCode } from 'lucide-react';
 import AnimatedCard from '../components/AnimatedCard';
 import GlassCard from '../components/GlassCard';
 import MapView from '../components/MapView';
@@ -68,16 +68,37 @@ const GiveAttendance = () => {
       return;
     }
 
+    if (!sessionId) {
+      toast.error('Yoklama oturumu bulunamadı');
+      return;
+    }
+
     try {
       setSubmitting(true);
+      console.log('📤 Sending check-in request:', {
+        sessionId,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        accuracy: location.accuracy,
+        deviceType: location.deviceType
+      });
+
       const response = await api.post(`/attendance/sessions/${sessionId}/checkin`, {
         latitude: location.latitude,
         longitude: location.longitude,
         accuracy: location.accuracy,
+        deviceType: location.deviceType || 'unknown', // Cihaz tipi: 'mobile' veya 'desktop'
+        speed: location.speed ?? null, // Hız bilgisi varsa
+        altitude: location.altitude ?? null, // Yükseklik bilgisi varsa
+        isMockLocation: null, // Frontend'de tespit edilemez, backend'de kontrol edilir
       });
 
-      if (response.data.isFlagged) {
-        toast.success('Yoklama kaydedildi ancak şüpheli konum tespit edildi');
+      console.log('✅ Check-in response:', response.data);
+
+      if (response.data?.isFlagged) {
+        toast.success(`Yoklama kaydedildi ancak şüpheli konum tespit edildi: ${response.data.flagReason || ''}`, {
+          duration: 4000
+        });
       } else {
         toast.success('Yoklama başarıyla kaydedildi!');
       }
@@ -86,7 +107,25 @@ const GiveAttendance = () => {
         navigate('/my-attendance');
       }, 2000);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Yoklama verilemedi');
+      console.error('❌ Check-in error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        statusText: error.response?.statusText
+      });
+      
+      const errorMessage = error.response?.data?.message || error.message || 'Yoklama verilemedi';
+      const errorType = error.response?.data?.error;
+      
+      if (errorType === 'DistanceExceeded') {
+        toast.error(`Mesafe çok uzak: ${error.response?.data?.distance?.toFixed(1) || 'N/A'}m. Lütfen sınıfa yakın olun.`, {
+          duration: 5000
+        });
+      } else {
+        toast.error(errorMessage, {
+          duration: 4000
+        });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -150,13 +189,25 @@ const GiveAttendance = () => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between"
         >
-          <h1 className="text-4xl font-bold gradient-text mb-2">
-            Yoklama Ver
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400">
-            {session.section?.course?.code} - {session.section?.course?.name}
-          </p>
+          <div>
+            <h1 className="text-4xl font-bold gradient-text mb-2">
+              Yoklama Ver
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400">
+              {session.section?.course?.code} - {session.section?.course?.name}
+            </p>
+          </div>
+          <motion.button
+            onClick={() => navigate(`/attendance/qr/${sessionId}`)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <QrCode className="w-5 h-5" />
+            QR Kod ile Yoklama
+          </motion.button>
         </motion.div>
 
         {/* Session Info */}
@@ -229,25 +280,77 @@ const GiveAttendance = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                  <div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">Mesafe</p>
+                {/* Device Type Info */}
+                {location.deviceType && (
+                  <div className={`p-3 rounded-lg text-sm ${
+                    location.deviceType === 'mobile' 
+                      ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400' 
+                      : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'
+                  }`}>
+                    {location.deviceType === 'mobile' ? (
+                      <p>📱 <strong>Mobil Cihaz:</strong> Yüksek doğruluklu GPS konumunuz alındı.</p>
+                    ) : (
+                      <p>💻 <strong>Masaüstü:</strong> IP/WiFi tabanlı konumunuz alındı (düşük doğruluk normaldir).</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Distance and Accuracy Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Mesafe</p>
                     <p className="text-2xl font-bold text-slate-900 dark:text-white">
                       {distance?.toFixed(1) || '0'} m
                     </p>
+                    <div className="mt-2">
+                      {isWithinRange ? (
+                        <div className="flex items-center gap-1 text-green-600 dark:text-green-400 text-xs">
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Uygun Mesafe</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-red-600 dark:text-red-400 text-xs">
+                          <AlertCircle className="w-4 h-4" />
+                          <span>Çok Uzak</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    {isWithinRange ? (
-                      <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                        <CheckCircle className="w-6 h-6" />
-                        <span className="font-semibold">Uygun Mesafe</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-                        <AlertCircle className="w-6 h-6" />
-                        <span className="font-semibold">Çok Uzak</span>
-                      </div>
-                    )}
+                  
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-1">Doğruluk</p>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                      {location.accuracy?.toFixed(1) || 'N/A'} m
+                    </p>
+                    <div className="mt-2">
+                      {(() => {
+                        const acc = location.accuracy || 0;
+                        let color, icon, text;
+                        if (acc < 20) {
+                          color = 'text-green-600 dark:text-green-400';
+                          icon = <CheckCircle className="w-4 h-4" />;
+                          text = 'Mükemmel';
+                        } else if (acc < 50) {
+                          color = 'text-yellow-600 dark:text-yellow-400';
+                          icon = <AlertCircle className="w-4 h-4" />;
+                          text = 'İyi';
+                        } else if (acc < 100) {
+                          color = 'text-orange-600 dark:text-orange-400';
+                          icon = <AlertCircle className="w-4 h-4" />;
+                          text = 'Kabul Edilebilir';
+                        } else {
+                          color = 'text-red-600 dark:text-red-400';
+                          icon = <AlertCircle className="w-4 h-4" />;
+                          text = 'Düşük';
+                        }
+                        return (
+                          <div className={`flex items-center gap-1 ${color} text-xs`}>
+                            {icon}
+                            <span>{text}</span>
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
 
@@ -258,7 +361,21 @@ const GiveAttendance = () => {
                   whileTap={{ scale: submitting || !isWithinRange ? 1 : 0.98 }}
                   className={`w-full btn-primary ${!isWithinRange ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  {submitting ? 'Kaydediliyor...' : 'Yoklama Ver'}
+                  {submitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <motion.div
+                        className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                      />
+                      Kaydediliyor...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <CheckCircle className="w-5 h-5" />
+                      Yoklamaya Katıl
+                    </span>
+                  )}
                 </motion.button>
               </div>
             )}

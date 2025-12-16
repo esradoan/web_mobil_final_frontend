@@ -5,7 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
-import { Mail, Lock, LogIn, AlertCircle, CheckSquare } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
+import { Mail, Lock, LogIn, AlertCircle, CheckSquare, Sun, Moon } from 'lucide-react';
 import ParticleBackground from '../components/ParticleBackground';
 import GlassCard from '../components/GlassCard';
 import GradientOrb from '../components/GradientOrb';
@@ -19,6 +20,7 @@ const loginSchema = z.object({
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { theme, toggleTheme, isDark } = useTheme();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -73,6 +75,21 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Dark Mode Toggle Button - Top Right */}
+      <motion.button
+        onClick={toggleTheme}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        className="fixed top-4 right-4 z-50 p-3 rounded-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 transition-colors"
+        title={isDark ? 'Açık moda geç' : 'Karanlık moda geç'}
+      >
+        {isDark ? (
+          <Sun className="w-5 h-5" />
+        ) : (
+          <Moon className="w-5 h-5" />
+        )}
+      </motion.button>
+
       {/* Particle Background */}
       <ParticleBackground />
       

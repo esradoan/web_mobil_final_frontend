@@ -34,6 +34,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await api.get('/users/me');
       console.log('User profile fetched:', response.data);
+      console.log('User role from API:', response.data?.role, response.data?.Role);
+      console.log('Full user object keys:', Object.keys(response.data || {}));
       setUser(response.data);
       setIsAuthenticated(true);
     } catch (error) {

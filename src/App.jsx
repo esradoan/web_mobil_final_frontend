@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Pages
@@ -20,9 +21,17 @@ import Grades from './pages/Grades';
 import Gradebook from './pages/Gradebook';
 import StartAttendance from './pages/StartAttendance';
 import GiveAttendance from './pages/GiveAttendance';
-import MyAttendance from './pages/MyAttendance';
+import QrCheckIn from './pages/QrCheckIn';
+import JoinAttendance from './pages/JoinAttendance';
+import AttendanceStatus from './pages/AttendanceStatus';
 import AttendanceReport from './pages/AttendanceReport';
 import ExcuseRequests from './pages/ExcuseRequests';
+import MySections from './pages/MySections';
+import FacultyGradebookList from './pages/FacultyGradebookList';
+import FacultyAttendanceReportsList from './pages/FacultyAttendanceReportsList';
+import CourseApplication from './pages/CourseApplication';
+import CourseApplicationsManagement from './pages/CourseApplicationsManagement';
+import StudentCourseApplication from './pages/StudentCourseApplication';
 
 // Components
 import LoadingSpinner from './components/LoadingSpinner';
@@ -58,6 +67,48 @@ const AdminRoute = ({ children }) => {
   const isAdmin = user?.role === 'Admin' || user?.Role === 'Admin' || user?.role === 0 || user?.Role === 0;
   
   if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+};
+
+// Faculty Route Component
+const FacultyRoute = ({ children }) => {
+  const { isAuthenticated, loading, user } = useAuth();
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const isFaculty = user?.role === 'Faculty' || user?.Role === 'Faculty' || user?.role === 1 || user?.Role === 1;
+  
+  if (!isFaculty) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+};
+
+// Student Route Component
+const StudentRoute = ({ children }) => {
+  const { isAuthenticated, loading, user } = useAuth();
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const isStudent = user?.role === 'Student' || user?.Role === 'Student' || user?.role === 2 || user?.Role === 2;
+  
+  if (!isStudent) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -203,6 +254,21 @@ function AppRoutes() {
             </AdminRoute>
           }
         />
+        <Route
+          path="/course-applications-management"
+          element={
+            <AdminRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <CourseApplicationsManagement />
+              </motion.div>
+            </AdminRoute>
+          }
+        />
         {/* Part 2 - Academic Management Routes */}
         <Route
           path="/courses"
@@ -237,7 +303,7 @@ function AppRoutes() {
         <Route
           path="/my-courses"
           element={
-            <ProtectedRoute>
+            <StudentRoute>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -246,13 +312,58 @@ function AppRoutes() {
               >
                 <MyCourses />
               </motion.div>
+            </StudentRoute>
+          }
+        />
+        <Route
+          path="/my-sections"
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <MySections />
+              </motion.div>
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/course-application"
+          element={
+            <FacultyRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <CourseApplication />
+              </motion.div>
+            </FacultyRoute>
+          }
+        />
+        <Route
+          path="/student-course-application"
+          element={
+            <StudentRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <StudentCourseApplication />
+              </motion.div>
+            </StudentRoute>
           }
         />
         <Route
           path="/grades"
           element={
-            <ProtectedRoute>
+            <StudentRoute>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -261,13 +372,28 @@ function AppRoutes() {
               >
                 <Grades />
               </motion.div>
-            </ProtectedRoute>
+            </StudentRoute>
+          }
+        />
+        <Route
+          path="/gradebook"
+          element={
+            <FacultyRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <FacultyGradebookList />
+              </motion.div>
+            </FacultyRoute>
           }
         />
         <Route
           path="/gradebook/:sectionId"
           element={
-            <ProtectedRoute>
+            <FacultyRoute>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -276,14 +402,14 @@ function AppRoutes() {
               >
                 <Gradebook />
               </motion.div>
-            </ProtectedRoute>
+            </FacultyRoute>
           }
         />
         {/* Part 2 - Attendance Routes */}
         <Route
           path="/attendance/start"
           element={
-            <ProtectedRoute>
+            <FacultyRoute>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -292,13 +418,13 @@ function AppRoutes() {
               >
                 <StartAttendance />
               </motion.div>
-            </ProtectedRoute>
+            </FacultyRoute>
           }
         />
         <Route
           path="/attendance/give/:sessionId"
           element={
-            <ProtectedRoute>
+            <StudentRoute>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -307,28 +433,73 @@ function AppRoutes() {
               >
                 <GiveAttendance />
               </motion.div>
-            </ProtectedRoute>
+            </StudentRoute>
           }
         />
         <Route
-          path="/my-attendance"
+          path="/attendance/qr/:sessionId"
           element={
-            <ProtectedRoute>
+            <StudentRoute>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                <MyAttendance />
+                <QrCheckIn />
               </motion.div>
-            </ProtectedRoute>
+            </StudentRoute>
+          }
+        />
+        <Route
+          path="/join-attendance"
+          element={
+            <StudentRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <JoinAttendance />
+              </motion.div>
+            </StudentRoute>
+          }
+        />
+        <Route
+          path="/attendance-status"
+          element={
+            <StudentRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <AttendanceStatus />
+              </motion.div>
+            </StudentRoute>
+          }
+        />
+        <Route
+          path="/attendance/reports"
+          element={
+            <FacultyRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <FacultyAttendanceReportsList />
+              </motion.div>
+            </FacultyRoute>
           }
         />
         <Route
           path="/attendance/report/:sectionId"
           element={
-            <ProtectedRoute>
+            <FacultyRoute>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -337,13 +508,13 @@ function AppRoutes() {
               >
                 <AttendanceReport />
               </motion.div>
-            </ProtectedRoute>
+            </FacultyRoute>
           }
         />
         <Route
           path="/excuse-requests"
           element={
-            <ProtectedRoute>
+            <FacultyRoute>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -352,7 +523,7 @@ function AppRoutes() {
               >
                 <ExcuseRequests />
               </motion.div>
-            </ProtectedRoute>
+            </FacultyRoute>
           }
         />
         <Route
@@ -377,11 +548,13 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

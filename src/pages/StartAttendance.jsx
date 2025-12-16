@@ -2,15 +2,17 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Layout from '../components/Layout';
-import { Calendar, Clock, MapPin, QrCode, Users } from 'lucide-react';
+import { Calendar, Clock, MapPin, QrCode, Users, XCircle } from 'lucide-react';
 import AnimatedCard from '../components/AnimatedCard';
 import GlassCard from '../components/GlassCard';
 import { QRCodeSVG } from 'qrcode.react';
 import api from '../config/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
 
 const StartAttendance = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [sections, setSections] = useState([]);
   const [selectedSection, setSelectedSection] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -19,6 +21,7 @@ const StartAttendance = () => {
   const [geofenceRadius, setGeofenceRadius] = useState(15);
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [closingSession, setClosingSession] = useState(false);
   const [fetchingSections, setFetchingSections] = useState(true);
 
   useEffect(() => {
@@ -28,19 +31,40 @@ const StartAttendance = () => {
   const fetchMySections = async () => {
     try {
       setFetchingSections(true);
-      // Mock data - backend'de /sections/my-sections endpoint'i olacak
-      setSections([
-        {
-          id: 1,
-          course: { code: 'CENG101', name: 'Introduction to Computer Engineering' },
-          sectionNumber: 'A',
-          classroom: { building: 'Engineering', roomNumber: 'A101', latitude: 41.0082, longitude: 28.9784 },
-        },
-      ]);
+      const userId = user?.id || user?.Id;
+      const response = await api.get('/sections', {
+        params: {
+          instructorId: userId // Faculty'nin atandığı section'ları getir
+        }
+      });
+      const sectionsData = response.data?.data || response.data || [];
+      setSections(sectionsData);
+      console.log('✅ Sections loaded:', sectionsData.length);
+      if (sectionsData.length === 0) {
+        toast.error('Size atanmış ders bulunmuyor. Lütfen admin ile iletişime geçin.');
+      }
     } catch (error) {
-      console.error('Sections yüklenemedi:', error);
+      console.error('❌ Sections yüklenemedi:', error);
+      toast.error('Dersler yüklenemedi');
     } finally {
       setFetchingSections(false);
+    }
+  };
+
+  const handleCloseSession = async () => {
+    if (!session?.id) return;
+
+    try {
+      setClosingSession(true);
+      await api.put(`/attendance/sessions/${session.id}/close`);
+      toast.success('Yoklama oturumu kapatıldı!');
+      setSession(null);
+    } catch (error) {
+      console.error('❌ Close session error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Oturum kapatılamadı';
+      toast.error(errorMessage);
+    } finally {
+      setClosingSession(false);
     }
   };
 
@@ -52,18 +76,36 @@ const StartAttendance = () => {
 
     try {
       setLoading(true);
-      const response = await api.post('/attendance/sessions', {
+      
+      // TimeSpan formatına çevir (HH:mm -> TimeSpan)
+      const parseTimeToTimeSpan = (timeString) => {
+        const [hours, minutes] = timeString.split(':').map(Number);
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
+      };
+
+      const requestData = {
         sectionId: parseInt(selectedSection),
-        date,
-        startTime,
-        endTime,
-        geofenceRadius: parseFloat(geofenceRadius),
-      });
+        date: date, // YYYY-MM-DD formatında
+        startTime: parseTimeToTimeSpan(startTime),
+        endTime: parseTimeToTimeSpan(endTime),
+        geofenceRadius: parseFloat(geofenceRadius) || 15.0,
+      };
+
+      console.log('📤 Sending session creation request:', requestData);
+      
+      const response = await api.post('/attendance/sessions', requestData);
 
       setSession(response.data);
       toast.success('Yoklama oturumu başlatıldı!');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Oturum başlatılamadı');
+      console.error('❌ Session creation error:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Oturum başlatılamadı';
+      toast.error(errorMessage);
+      console.error('Error details:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: errorMessage
+      });
     } finally {
       setLoading(false);
     }
@@ -105,7 +147,7 @@ const StartAttendance = () => {
                     <option value="">Section seçiniz...</option>
                     {sections.map((section) => (
                       <option key={section.id} value={section.id}>
-                        {section.course?.code} - Section {section.sectionNumber}
+                        {section.courseName || section.course?.name || 'Ders'} - Section {section.sectionNumber}
                       </option>
                     ))}
                   </select>
@@ -190,12 +232,23 @@ const StartAttendance = () => {
                 {/* Submit */}
                 <motion.button
                   type="submit"
-                  disabled={loading || !selectedSection}
-                  whileHover={{ scale: loading ? 1 : 1.02 }}
-                  whileTap={{ scale: loading ? 1 : 0.98 }}
-                  className="btn-primary w-full"
+                  disabled={loading || !selectedSection || fetchingSections}
+                  whileHover={{ scale: (loading || !selectedSection || fetchingSections) ? 1 : 1.02 }}
+                  whileTap={{ scale: (loading || !selectedSection || fetchingSections) ? 1 : 0.98 }}
+                  className={`btn-primary w-full ${(loading || !selectedSection || fetchingSections) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  onClick={(e) => {
+                    if (!selectedSection) {
+                      e.preventDefault();
+                      toast.error('Lütfen bir section seçin');
+                      return;
+                    }
+                    if (loading || fetchingSections) {
+                      e.preventDefault();
+                      return;
+                    }
+                  }}
                 >
-                  {loading ? 'Başlatılıyor...' : 'Yoklama Oturumunu Başlat'}
+                  {fetchingSections ? 'Yükleniyor...' : loading ? 'Başlatılıyor...' : 'Yoklama Oturumunu Başlat'}
                 </motion.button>
               </form>
             </GlassCard>
@@ -211,7 +264,7 @@ const StartAttendance = () => {
                     <span className="font-semibold">Yoklama Oturumu Aktif</span>
                   </div>
                   <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                    {selectedSectionData?.course?.code} - Section {selectedSectionData?.sectionNumber}
+                    {selectedSectionData?.courseName || selectedSectionData?.course?.name || 'Ders'} - Section {selectedSectionData?.sectionNumber}
                   </h2>
                   <p className="text-slate-600 dark:text-slate-400">
                     {date} | {startTime} - {endTime}
@@ -225,7 +278,7 @@ const StartAttendance = () => {
                   </div>
                 </div>
 
-                <div className="text-center">
+                <div className="text-center mb-6">
                   <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
                     QR Kod: <span className="font-mono font-semibold">{session.qrCode}</span>
                   </p>
@@ -233,6 +286,27 @@ const StartAttendance = () => {
                     Bu QR kodu öğrencilerle paylaşın (5 saniyede bir yenilenir)
                   </p>
                 </div>
+
+                {/* Close Session Button */}
+                <motion.button
+                  onClick={handleCloseSession}
+                  disabled={closingSession}
+                  whileHover={{ scale: closingSession ? 1 : 1.02 }}
+                  whileTap={{ scale: closingSession ? 1 : 0.98 }}
+                  className="w-full btn-secondary flex items-center justify-center gap-2"
+                >
+                  {closingSession ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Kapatılıyor...
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-5 h-5" />
+                      Yoklama Oturumunu Bitir
+                    </>
+                  )}
+                </motion.button>
               </GlassCard>
             </AnimatedCard>
           </div>

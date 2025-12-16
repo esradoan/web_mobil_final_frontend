@@ -24,27 +24,41 @@ const Profile = () => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Check if user is Admin
+  const isAdmin = user?.role === 'Admin' || user?.Role === 'Admin';
+
+  // Admin için sadece email schema
+  const adminSchema = z.object({
+    email: z.string().email('Geçerli bir email adresi giriniz'),
+  });
+
   // Debug: User objesini console'a yazdır
   console.log('Current user object:', user);
+  console.log('Is Admin:', isAdmin);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm({
-    resolver: zodResolver(profileSchema),
+    resolver: zodResolver(isAdmin ? adminSchema : profileSchema),
     defaultValues: {
-      firstName: user?.firstName || '',
-      lastName: user?.lastName || '',
-      email: user?.email || '',
-      phoneNumber: user?.phoneNumber || '',
+      firstName: user?.firstName || user?.FirstName || '',
+      lastName: user?.lastName || user?.LastName || '',
+      email: user?.email || user?.Email || '',
+      phoneNumber: user?.phoneNumber || user?.PhoneNumber || '',
     },
   });
 
   const onSubmit = async (data) => {
     setLoading(true);
     try {
-      await api.put('/users/me', data);
+      // Admin için sadece email gönder (backend zaten kontrol ediyor ama ekstra güvenlik)
+      const payload = isAdmin 
+        ? { email: data.email }
+        : data;
+      
+      await api.put('/users/me', payload);
       await fetchUserProfile();
       toast.success('Profil başarıyla güncellendi!');
     } catch (error) {
@@ -130,7 +144,8 @@ const Profile = () => {
           </div>
         </motion.div>
 
-        {/* Profile Picture Section */}
+        {/* Profile Picture Section - Admin için profil resmi yok */}
+        {!isAdmin && (
         <AnimatedCard delay={0.1}>
           <GlassCard className="p-8">
           <div className="flex flex-col items-center">
@@ -170,8 +185,10 @@ const Profile = () => {
                     
                     {/* Default Avatar (Initials) */}
                     <span className="relative z-10">
-                      {user?.firstName?.[0] || user?.FirstName?.[0]}
-                      {user?.lastName?.[0] || user?.LastName?.[0]}
+                      {isAdmin 
+                        ? 'A' // Admin için sadece 'A'
+                        : `${user?.firstName?.[0] || user?.FirstName?.[0] || ''}${user?.lastName?.[0] || user?.LastName?.[0] || ''}`
+                      }
                     </span>
                     
                     {/* Profile Picture Overlay */}
@@ -230,119 +247,179 @@ const Profile = () => {
           </div>
           </GlassCard>
         </AnimatedCard>
+        )}
 
         {/* Profile Form */}
         <AnimatedCard delay={0.2}>
           <GlassCard className="p-8">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* First Name */}
+          {isAdmin ? (
+            // Admin için sadece email formu
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm text-blue-700 dark:text-blue-400">
+                  <strong>Admin Hesabı:</strong> Admin hesapları için sadece email adresi güncellenebilir.
+                </p>
+              </div>
+              
+              {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Ad
+                  Email
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input
-                    type="text"
-                    {...register('firstName')}
+                    type="email"
+                    {...register('email')}
                     className="input-field pl-10"
-                    placeholder="Adınız"
+                    placeholder="admin@smartcampus.edu"
                   />
                 </div>
-                {errors.firstName && (
+                {errors.email && (
                   <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                    {errors.firstName.message}
+                    {errors.email.message}
                   </p>
                 )}
               </div>
 
-              {/* Last Name */}
+              {/* Submit Button */}
+              <motion.button
+                type="submit"
+                disabled={loading}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="btn-primary w-full md:w-auto flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <motion.div
+                      className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    />
+                    Kaydediliyor...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    Email'i Güncelle
+                  </>
+                )}
+              </motion.button>
+            </form>
+          ) : (
+            // Normal kullanıcılar için tam form
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* First Name */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Ad
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input
+                      type="text"
+                      {...register('firstName')}
+                      className="input-field pl-10"
+                      placeholder="Adınız"
+                    />
+                  </div>
+                  {errors.firstName && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                      {errors.firstName.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Last Name */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Soyad
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input
+                      type="text"
+                      {...register('lastName')}
+                      className="input-field pl-10"
+                      placeholder="Soyadınız"
+                    />
+                  </div>
+                  {errors.lastName && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                      {errors.lastName.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Soyad
+                  Email
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input
-                    type="text"
-                    {...register('lastName')}
+                    type="email"
+                    {...register('email')}
                     className="input-field pl-10"
-                    placeholder="Soyadınız"
+                    placeholder="ornek@universite.edu.tr"
                   />
                 </div>
-                {errors.lastName && (
+                {errors.email && (
                   <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                    {errors.lastName.message}
+                    {errors.email.message}
                   </p>
                 )}
               </div>
-            </div>
 
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+              {/* Phone Number */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  Telefon Numarası
+                </label>
                 <input
-                  type="email"
-                  {...register('email')}
-                  className="input-field pl-10"
-                  placeholder="ornek@universite.edu.tr"
+                  type="tel"
+                  {...register('phoneNumber')}
+                  className="input-field"
+                  placeholder="+90 555 123 45 67"
                 />
+                {errors.phoneNumber && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {errors.phoneNumber.message}
+                  </p>
+                )}
               </div>
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                  {errors.email.message}
-                </p>
-              )}
-            </div>
 
-            {/* Phone Number */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Telefon Numarası
-              </label>
-              <input
-                type="tel"
-                {...register('phoneNumber')}
-                className="input-field"
-                placeholder="+90 555 123 45 67"
-              />
-              {errors.phoneNumber && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                  {errors.phoneNumber.message}
-                </p>
-              )}
-            </div>
+              {/* Submit Button */}
+              <motion.button
+                type="submit"
+                disabled={loading}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="btn-primary w-full md:w-auto flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <motion.div
+                      className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    />
+                    Kaydediliyor...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    Değişiklikleri Kaydet
+                  </>
+                )}
+              </motion.button>
+            </form>
+          )}
 
-            {/* Submit Button */}
-            <motion.button
-              type="submit"
-              disabled={loading}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="btn-primary w-full md:w-auto flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <>
-                  <motion.div
-                    className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                  />
-                  Kaydediliyor...
-                </>
-              ) : (
-                <>
-                  <Save className="w-5 h-5" />
-                  Değişiklikleri Kaydet
-                </>
-              )}
-            </motion.button>
-          </form>
           </GlassCard>
         </AnimatedCard>
       </div>

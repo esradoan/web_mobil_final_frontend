@@ -34,31 +34,8 @@ const MyCourses = () => {
       setEnrollments(response.data?.data || []);
     } catch (error) {
       console.error('Dersler yüklenemedi:', error);
-      // Mock data for development
-      setEnrollments([
-        {
-          id: 1,
-          section: {
-            id: 1,
-            course: {
-              code: 'CENG101',
-              name: 'Introduction to Computer Engineering',
-            },
-            sectionNumber: 'A',
-            instructor: {
-              firstName: 'Ahmet',
-              lastName: 'Yılmaz',
-            },
-            schedule: {
-              monday: ['09:00-10:30'],
-              wednesday: ['09:00-10:30'],
-            },
-          },
-          status: 'enrolled',
-          enrollmentDate: '2025-12-01T10:00:00Z',
-          attendancePercentage: 85.5,
-        },
-      ]);
+      toast.error('Dersler yüklenemedi');
+      setEnrollments([]);
     } finally {
       setLoading(false);
     }
