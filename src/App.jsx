@@ -37,6 +37,10 @@ import MealMenu from './pages/MealMenu';
 import MealReservations from './pages/MealReservations';
 import Wallet from './pages/Wallet';
 import MealScan from './pages/MealScan';
+import Events from './pages/Events';
+import EventDetail from './pages/EventDetail';
+import MyEvents from './pages/MyEvents';
+import EventCheckIn from './pages/EventCheckIn';
 
 // Components
 import LoadingSpinner from './components/LoadingSpinner';
@@ -588,6 +592,82 @@ function AppRoutes() {
                 transition={{ duration: 0.3 }}
               >
                 <MealScan />
+              </motion.div>
+            </ProtectedRoute>
+          }
+        />
+        {/* Part 3 - Event Management Routes */}
+        <Route
+          path="/events"
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Events />
+              </motion.div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/events/:id"
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <EventDetail />
+              </motion.div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-events"
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <MyEvents />
+              </motion.div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/events/checkin"
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <EventCheckIn />
+              </motion.div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/events/:eventId/checkin"
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <EventCheckIn />
               </motion.div>
             </ProtectedRoute>
           }

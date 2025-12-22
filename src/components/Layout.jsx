@@ -20,7 +20,8 @@ import {
   TrendingUp,
   UtensilsCrossed,
   Wallet,
-  QrCode
+  QrCode,
+  Calendar
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -57,7 +58,9 @@ const Layout = ({ children }) => {
       { path: '/courses', label: 'Ders Kataloğu', icon: School },
       { path: '/meals/menu', label: 'Yemek Menüleri', icon: UtensilsCrossed },
       { path: '/meals/reservations', label: 'Rezervasyonlarım', icon: UtensilsCrossed },
-      { path: '/wallet', label: 'Cüzdan', icon: Wallet }
+      { path: '/wallet', label: 'Cüzdan', icon: Wallet },
+      { path: '/events', label: 'Etkinlikler', icon: Calendar },
+      { path: '/my-events', label: 'Etkinliklerim', icon: Calendar }
     );
   }
 
@@ -70,7 +73,8 @@ const Layout = ({ children }) => {
       { path: '/attendance/reports', label: 'Yoklama Raporları', icon: ClipboardCheck },
       { path: '/gradebook', label: 'Not Girişi', icon: GraduationCap },
       { path: '/excuse-requests', label: 'Mazeret Talepleri', icon: Users },
-      { path: '/meals/scan', label: 'QR Kod Okutma', icon: QrCode }
+      { path: '/meals/scan', label: 'Yemek QR Okutma', icon: QrCode },
+      { path: '/events/checkin', label: 'Etkinlik Check-in', icon: QrCode }
     );
   }
 
@@ -78,7 +82,8 @@ const Layout = ({ children }) => {
   if (isAdmin) {
     navItems.push(
       { path: '/admin', label: 'Admin Paneli', icon: Users },
-      { path: '/meals/scan', label: 'QR Kod Okutma', icon: QrCode }
+      { path: '/meals/scan', label: 'Yemek QR Okutma', icon: QrCode },
+      { path: '/events/checkin', label: 'Etkinlik Check-in', icon: QrCode }
     );
   } else {
     // Common menu items (not for admin)
