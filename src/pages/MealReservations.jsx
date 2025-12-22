@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  UtensilsCrossed, 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  X, 
-  QrCode, 
-  CheckCircle, 
+import {
+  UtensilsCrossed,
+  Calendar,
+  Clock,
+  MapPin,
+  X,
+  QrCode,
+  CheckCircle,
   XCircle,
   DollarSign,
   Trash2,
-  Maximize2
+  Maximize2,
+  Copy,
+  Check
 } from 'lucide-react';
 import api from '../config/api';
 import Layout from '../components/Layout';
@@ -45,18 +47,24 @@ const MealReservations = () => {
   };
 
   const handleCancel = async (reservationId) => {
+    if (!reservationId) {
+      toast.error('Rezervasyon ID bulunamadı');
+      return;
+    }
+
     if (!window.confirm('Bu rezervasyonu iptal etmek istediğinize emin misiniz?')) {
       return;
     }
 
     setCancelling(reservationId);
     try {
+      console.log('Cancelling reservation:', reservationId);
       await api.delete(`/meals/reservations/${reservationId}`);
       toast.success('Rezervasyon başarıyla iptal edildi');
       fetchReservations();
     } catch (error) {
       console.error('Error cancelling reservation:', error);
-      const errorMessage = error.response?.data?.message || 'Rezervasyon iptal edilirken hata oluştu';
+      const errorMessage = error.response?.data?.message || error.message || 'Rezervasyon iptal edilirken hata oluştu';
       toast.error(errorMessage);
     } finally {
       setCancelling(null);
@@ -119,29 +127,84 @@ const MealReservations = () => {
   };
 
   const canCancel = (reservation) => {
-    if (reservation.status?.toLowerCase() !== 'reserved') return false;
+    const status = reservation.status || reservation.Status || '';
+    if (status.toLowerCase() !== 'reserved') {
+      console.log('Cannot cancel: status is not reserved', status);
+      return false;
+    }
     
-    const reservationDate = new Date(reservation.date);
-    const mealTime = reservation.mealType?.toLowerCase() === 'lunch' 
-      ? new Date(reservationDate.setHours(12, 0, 0, 0))
-      : new Date(reservationDate.setHours(18, 0, 0, 0));
-    
-    const now = new Date();
-    const hoursUntilMeal = (mealTime - now) / (1000 * 60 * 60);
-    
-    return hoursUntilMeal >= 2;
+    try {
+      const dateStr = reservation.date || reservation.Date;
+      if (!dateStr) {
+        console.log('Cannot cancel: no date');
+        return false;
+      }
+      
+      // Parse date string (could be ISO string or date object)
+      const reservationDate = new Date(dateStr);
+      if (isNaN(reservationDate.getTime())) {
+        console.log('Cannot cancel: invalid date', dateStr);
+        return false;
+      }
+      
+      // Get date part only (ignore time)
+      const dateOnly = new Date(reservationDate.getFullYear(), reservationDate.getMonth(), reservationDate.getDate());
+      
+      // Create meal time (lunch at 12:00, dinner at 18:00)
+      const mealTime = new Date(dateOnly);
+      const mealType = (reservation.mealType || reservation.MealType || 'lunch').toLowerCase();
+      
+      if (mealType === 'lunch') {
+        mealTime.setHours(12, 0, 0, 0);
+      } else {
+        mealTime.setHours(18, 0, 0, 0);
+      }
+      
+      const now = new Date();
+      const hoursUntilMeal = (mealTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+      
+      console.log('canCancel check:', {
+        reservationDate: dateStr,
+        mealTime: mealTime.toISOString(),
+        now: now.toISOString(),
+        hoursUntilMeal: hoursUntilMeal,
+        canCancel: hoursUntilMeal >= 2
+      });
+      
+      return hoursUntilMeal >= 2;
+    } catch (error) {
+      console.error('Error calculating canCancel:', error, reservation);
+      return false;
+    }
   };
 
   // Separate upcoming and past reservations
   const now = new Date();
   const upcomingReservations = reservations.filter(r => {
-    const reservationDate = new Date(r.date);
-    return reservationDate >= now && r.status?.toLowerCase() === 'reserved';
+    const status = (r.status || r.Status || '').toLowerCase();
+    if (status !== 'reserved') return false;
+    
+    try {
+      const reservationDate = new Date(r.date || r.Date);
+      if (isNaN(reservationDate.getTime())) return false;
+      return reservationDate >= now;
+    } catch {
+      return false;
+    }
   });
   
   const pastReservations = reservations.filter(r => {
-    const reservationDate = new Date(r.date);
-    return reservationDate < now || r.status?.toLowerCase() !== 'reserved';
+    const status = (r.status || r.Status || '').toLowerCase();
+    if (status === 'reserved') {
+      try {
+        const reservationDate = new Date(r.date || r.Date);
+        if (isNaN(reservationDate.getTime())) return true;
+        return reservationDate < now;
+      } catch {
+        return true;
+      }
+    }
+    return true; // used, cancelled, etc.
   });
 
   return (
@@ -329,6 +392,23 @@ const ReservationCard = ({
           </div>
         )}
 
+        {/* QR Code Value */}
+        {qrCode && status.toLowerCase() === 'reserved' && (
+          <div className="mb-4 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  QR Kod Değeri:
+                </p>
+                <p className="text-sm font-mono text-gray-900 dark:text-white break-all">
+                  {qrCode}
+                </p>
+              </div>
+              <CopyButton text={qrCode} />
+            </div>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex gap-2">
           {status.toLowerCase() === 'reserved' && qrCode && (
@@ -340,18 +420,31 @@ const ReservationCard = ({
               QR Kod
             </button>
           )}
-          {canCancel && (
+          {status.toLowerCase() === 'reserved' && (
             <button
-              onClick={() => onCancel(reservation.id || reservation.Id)}
-              disabled={cancelling}
-              className="flex-1 py-2 px-4 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-red-500 dark:hover:bg-red-600"
+              onClick={() => {
+                const reservationId = reservation.id || reservation.Id;
+                console.log('Cancel button clicked, reservationId:', reservationId, 'canCancel:', canCancel);
+                if (reservationId) {
+                  onCancel(reservationId);
+                } else {
+                  toast.error('Rezervasyon ID bulunamadı');
+                }
+              }}
+              disabled={cancelling || !canCancel}
+              className={`flex-1 py-2 px-4 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 ${
+                canCancel
+                  ? 'bg-red-600 hover:bg-red-700 text-white dark:bg-red-500 dark:hover:bg-red-600'
+                  : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              title={!canCancel ? 'Rezervasyon iptali için en az 2 saat önceden iptal etmelisiniz' : ''}
             >
               {cancelling ? (
                 <LoadingSpinner size="sm" />
               ) : (
                 <>
                   <Trash2 className="w-4 h-4" />
-                  İptal Et
+                  {canCancel ? 'İptal Et' : 'İptal Edilemez'}
                 </>
               )}
             </button>
@@ -359,6 +452,36 @@ const ReservationCard = ({
         </div>
       </div>
     </motion.div>
+  );
+};
+
+const CopyButton = ({ text }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success('QR kod değeri kopyalandı!');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      toast.error('Kopyalama başarısız');
+    }
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="p-2 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-lg transition-all flex-shrink-0"
+      title="Kopyala"
+    >
+      {copied ? (
+        <Check className="w-4 h-4" />
+      ) : (
+        <Copy className="w-4 h-4" />
+      )}
+    </button>
   );
 };
 
@@ -399,6 +522,23 @@ const QrCodeModal = ({ reservation, onClose, formatDate }) => {
             </div>
           </div>
 
+          {/* QR Code Value */}
+          {qrCode && (
+            <div className="p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    QR Kod Değeri:
+                  </p>
+                  <p className="text-sm font-mono text-gray-900 dark:text-white break-all">
+                    {qrCode}
+                  </p>
+                </div>
+                <CopyButton text={qrCode} />
+              </div>
+            </div>
+          )}
+
           <div className="text-center space-y-2">
             <p className="text-sm text-gray-600 dark:text-gray-400">Yemekhane:</p>
             <p className="font-semibold text-gray-900 dark:text-white">{cafeteriaName}</p>
@@ -416,7 +556,7 @@ const QrCodeModal = ({ reservation, onClose, formatDate }) => {
 
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 mt-4">
             <p className="text-xs text-blue-700 dark:text-blue-300 text-center">
-              Bu QR kodu yemekhanede gösterin
+              Bu QR kodu yemekhanede gösterin veya QR kod değerini manuel olarak girebilirsiniz
             </p>
           </div>
         </div>

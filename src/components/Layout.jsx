@@ -18,7 +18,9 @@ import {
   Users,
   School,
   TrendingUp,
-  UtensilsCrossed
+  UtensilsCrossed,
+  Wallet,
+  QrCode
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -54,7 +56,8 @@ const Layout = ({ children }) => {
       { path: '/grades', label: 'Notlarım', icon: GraduationCap },
       { path: '/courses', label: 'Ders Kataloğu', icon: School },
       { path: '/meals/menu', label: 'Yemek Menüleri', icon: UtensilsCrossed },
-      { path: '/meals/reservations', label: 'Rezervasyonlarım', icon: UtensilsCrossed }
+      { path: '/meals/reservations', label: 'Rezervasyonlarım', icon: UtensilsCrossed },
+      { path: '/wallet', label: 'Cüzdan', icon: Wallet }
     );
   }
 
@@ -66,14 +69,16 @@ const Layout = ({ children }) => {
       { path: '/attendance/start', label: 'Yoklama Başlat', icon: ClipboardCheck },
       { path: '/attendance/reports', label: 'Yoklama Raporları', icon: ClipboardCheck },
       { path: '/gradebook', label: 'Not Girişi', icon: GraduationCap },
-      { path: '/excuse-requests', label: 'Mazeret Talepleri', icon: Users }
+      { path: '/excuse-requests', label: 'Mazeret Talepleri', icon: Users },
+      { path: '/meals/scan', label: 'QR Kod Okutma', icon: QrCode }
     );
   }
 
   // Admin-specific menu items
   if (isAdmin) {
     navItems.push(
-      { path: '/admin', label: 'Admin Paneli', icon: Users }
+      { path: '/admin', label: 'Admin Paneli', icon: Users },
+      { path: '/meals/scan', label: 'QR Kod Okutma', icon: QrCode }
     );
   } else {
     // Common menu items (not for admin)
@@ -118,7 +123,7 @@ const Layout = ({ children }) => {
           </motion.div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden">
             {navItems.map((item, index) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
@@ -239,7 +244,7 @@ const Layout = ({ children }) => {
                 )}
               </motion.button>
             </div>
-            <nav className="flex-1 p-4 space-y-2">
+            <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;

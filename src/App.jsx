@@ -35,6 +35,8 @@ import StudentCourseApplication from './pages/StudentCourseApplication';
 // Part 3 Pages
 import MealMenu from './pages/MealMenu';
 import MealReservations from './pages/MealReservations';
+import Wallet from './pages/Wallet';
+import MealScan from './pages/MealScan';
 
 // Components
 import LoadingSpinner from './components/LoadingSpinner';
@@ -556,6 +558,36 @@ function AppRoutes() {
                 transition={{ duration: 0.3 }}
               >
                 <MealReservations />
+              </motion.div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/wallet"
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Wallet />
+              </motion.div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/meals/scan"
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <MealScan />
               </motion.div>
             </ProtectedRoute>
           }

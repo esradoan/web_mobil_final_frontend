@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, UtensilsCrossed, Clock, MapPin, Leaf, DollarSign, ChefHat, X } from 'lucide-react';
+import { Calendar, UtensilsCrossed, Clock, MapPin, Leaf, DollarSign, ChefHat, X, Wallet } from 'lucide-react';
 import api from '../config/api';
 import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -15,10 +15,13 @@ const MealMenu = () => {
   const [reserving, setReserving] = useState(null);
   const [showReservationModal, setShowReservationModal] = useState(false);
   const [selectedMenu, setSelectedMenu] = useState(null);
+  const [balance, setBalance] = useState(null);
+  const [loadingBalance, setLoadingBalance] = useState(true);
 
-  // Fetch cafeterias
+  // Fetch cafeterias and balance
   useEffect(() => {
     fetchCafeterias();
+    fetchBalance();
   }, []);
 
   // Fetch menus when date or cafeteria changes
@@ -39,6 +42,20 @@ const MealMenu = () => {
     } catch (error) {
       console.error('Error fetching cafeterias:', error);
       toast.error('Yemekhaneler yüklenirken hata oluştu');
+    }
+  };
+
+  const fetchBalance = async () => {
+    setLoadingBalance(true);
+    try {
+      const response = await api.get('/wallet/balance');
+      setBalance(response.data.balance || 0);
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+      // Bakiye yüklenemezse sessizce devam et
+      setBalance(null);
+    } finally {
+      setLoadingBalance(false);
     }
   };
 
@@ -90,6 +107,7 @@ const MealMenu = () => {
       setShowReservationModal(false);
       setSelectedMenu(null);
       fetchMenus(); // Refresh menus
+      fetchBalance(); // Refresh balance
     } catch (error) {
       console.error('Error creating reservation:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Rezervasyon oluşturulurken hata oluştu';
@@ -137,13 +155,41 @@ const MealMenu = () => {
         >
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-3">
-              <UtensilsCrossed className="w-10 h-10 text-blue-600 dark:text-blue-400" />
-              Yemek Menüleri
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Günlük menüleri görüntüleyin ve rezervasyon yapın
-            </p>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-3">
+                  <UtensilsCrossed className="w-8 h-8 md:w-10 md:h-10 text-blue-600 dark:text-blue-400" />
+                  Yemek Menüleri
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Günlük menüleri görüntüleyin ve rezervasyon yapın
+                </p>
+              </div>
+              
+              {/* Balance Display */}
+              {balance !== null && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl shadow-lg p-4 w-full md:w-auto md:min-w-[200px]"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Wallet className="w-5 h-5" />
+                    <span className="text-sm font-medium opacity-90">Bakiye</span>
+                  </div>
+                  {loadingBalance ? (
+                    <div className="flex items-center gap-2">
+                      <LoadingSpinner size="sm" />
+                      <span className="text-sm">Yükleniyor...</span>
+                    </div>
+                  ) : (
+                    <p className="text-xl md:text-2xl font-bold">
+                      {parseFloat(balance).toFixed(2)} ₺
+                    </p>
+                  )}
+                </motion.div>
+              )}
+            </div>
           </div>
 
           {/* Filters */}

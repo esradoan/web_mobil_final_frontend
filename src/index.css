@@ -39,6 +39,32 @@
   ::-webkit-scrollbar-thumb:hover {
     background: rgb(2 132 199);
   }
+
+  /* Sidebar navigation scrollbar */
+  nav.overflow-y-auto::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  nav.overflow-y-auto::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  nav.overflow-y-auto::-webkit-scrollbar-thumb {
+    background: rgb(203 213 225);
+    border-radius: 9999px;
+  }
+  
+  nav.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: rgb(148 163 184);
+  }
+  
+  .dark nav.overflow-y-auto::-webkit-scrollbar-thumb {
+    background: rgb(71 85 105);
+  }
+  
+  .dark nav.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: rgb(100 116 139);
+  }
 }
 
 @layer components {
