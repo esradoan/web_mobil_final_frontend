@@ -32,6 +32,9 @@ import FacultyAttendanceReportsList from './pages/FacultyAttendanceReportsList';
 import CourseApplication from './pages/CourseApplication';
 import CourseApplicationsManagement from './pages/CourseApplicationsManagement';
 import StudentCourseApplication from './pages/StudentCourseApplication';
+// Part 3 Pages
+import MealMenu from './pages/MealMenu';
+import MealReservations from './pages/MealReservations';
 
 // Components
 import LoadingSpinner from './components/LoadingSpinner';
@@ -524,6 +527,37 @@ function AppRoutes() {
                 <ExcuseRequests />
               </motion.div>
             </FacultyRoute>
+          }
+        />
+        {/* Part 3 - Meal Service Routes */}
+        <Route
+          path="/meals/menu"
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <MealMenu />
+              </motion.div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/meals/reservations"
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <MealReservations />
+              </motion.div>
+            </ProtectedRoute>
           }
         />
         <Route

@@ -17,7 +17,8 @@ import {
   GraduationCap,
   Users,
   School,
-  TrendingUp
+  TrendingUp,
+  UtensilsCrossed
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -51,7 +52,9 @@ const Layout = ({ children }) => {
       { path: '/join-attendance', label: 'Yoklamaya Katıl', icon: ClipboardCheck },
       { path: '/attendance-status', label: 'Devamsızlık Bilgisi', icon: TrendingUp },
       { path: '/grades', label: 'Notlarım', icon: GraduationCap },
-      { path: '/courses', label: 'Ders Kataloğu', icon: School }
+      { path: '/courses', label: 'Ders Kataloğu', icon: School },
+      { path: '/meals/menu', label: 'Yemek Menüleri', icon: UtensilsCrossed },
+      { path: '/meals/reservations', label: 'Rezervasyonlarım', icon: UtensilsCrossed }
     );
   }
 
