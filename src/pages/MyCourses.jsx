@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Layout from '../components/Layout';
-import { 
-  BookOpen, 
-  User, 
-  Calendar, 
+import {
+  BookOpen,
+  User,
+  Calendar,
   Trash2,
   AlertCircle,
   CheckCircle,
@@ -49,7 +49,7 @@ const MyCourses = () => {
     try {
       setDropping(prev => ({ ...prev, [enrollmentId]: true }));
       await api.delete(`/enrollments/${enrollmentId}`);
-      
+
       toast.success('Ders başarıyla bırakıldı');
       fetchMyCourses(); // Refresh list
     } catch (error) {
@@ -72,7 +72,7 @@ const MyCourses = () => {
 
   const formatSchedule = (schedule) => {
     if (!schedule) return 'Bilgi yok';
-    
+
     const days = {
       monday: 'Pzt',
       tuesday: 'Sal',
@@ -150,6 +150,15 @@ const MyCourses = () => {
               const attendanceStatus = getAttendanceStatus(enrollment.attendancePercentage || 0);
               const StatusIcon = attendanceStatus.icon;
 
+              // Backend returns courseCode, courseName, instructorName directly on section DTO
+              const courseCode = enrollment.section?.courseCode || enrollment.section?.course?.code || '';
+              const courseName = enrollment.section?.courseName || enrollment.section?.course?.name || '';
+              const sectionNumber = enrollment.section?.sectionNumber || '';
+              const instructorFirstName = enrollment.section?.instructor?.firstName || '';
+              const instructorLastName = enrollment.section?.instructor?.lastName || '';
+              const instructorName = enrollment.section?.instructorName || (instructorFirstName && instructorLastName ? `${instructorFirstName} ${instructorLastName}` : '');
+              const courseId = enrollment.section?.courseId || enrollment.section?.course?.id;
+
               return (
                 <AnimatedCard key={enrollment.id} delay={index * 0.1}>
                   <GlassCard className="p-6">
@@ -162,15 +171,15 @@ const MyCourses = () => {
                           </div>
                           <div>
                             <span className="font-mono font-bold text-primary-600 dark:text-primary-400">
-                              {enrollment.section?.course?.code}
+                              {courseCode || 'Ders Kodu'}
                             </span>
                             <span className="ml-2 text-sm text-slate-600 dark:text-slate-400">
-                              Section {enrollment.section?.sectionNumber}
+                              Section {sectionNumber || '?'}
                             </span>
                           </div>
                         </div>
                         <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
-                          {enrollment.section?.course?.name}
+                          {courseName || 'Ders Adı'}
                         </h3>
                       </div>
                     </div>
@@ -179,7 +188,7 @@ const MyCourses = () => {
                     <div className="flex items-center gap-2 mb-3 text-slate-600 dark:text-slate-400">
                       <User className="w-4 h-4" />
                       <span className="text-sm">
-                        {enrollment.section?.instructor?.firstName} {enrollment.section?.instructor?.lastName}
+                        {instructorName || 'Bilgi yok'}
                       </span>
                     </div>
 
@@ -205,13 +214,12 @@ const MyCourses = () => {
                       <div className="flex items-center gap-2">
                         <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
                           <motion.div
-                            className={`h-2 rounded-full ${
-                              enrollment.attendancePercentage >= 80
+                            className={`h-2 rounded-full ${enrollment.attendancePercentage >= 80
                                 ? 'bg-green-500'
                                 : enrollment.attendancePercentage >= 60
-                                ? 'bg-orange-500'
-                                : 'bg-red-500'
-                            }`}
+                                  ? 'bg-orange-500'
+                                  : 'bg-red-500'
+                              }`}
                             initial={{ width: 0 }}
                             animate={{ width: `${enrollment.attendancePercentage || 0}%` }}
                             transition={{ duration: 0.5 }}
@@ -231,7 +239,7 @@ const MyCourses = () => {
                     {/* Actions */}
                     <div className="flex gap-2">
                       <motion.button
-                        onClick={() => navigate(`/courses/${enrollment.section?.course?.id}`)}
+                        onClick={() => courseId && navigate(`/courses/${courseId}`)}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         className="flex-1 btn-secondary text-sm"

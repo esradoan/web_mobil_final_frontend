@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  Users, 
-  BookOpen, 
-  Calendar, 
+import {
+  Users,
+  BookOpen,
+  Calendar,
   TrendingUp,
   Bell,
   CheckCircle,
@@ -51,14 +51,14 @@ const Dashboard = () => {
 
     try {
       setLoading(true);
-      
+
       // Role kontrolünü burada yap (user objesi güncel)
       // Backend'den enum string olarak geliyor: "Student", "Faculty", "Admin"
       const userRole = user?.role ?? user?.Role ?? user?.userRole ?? null;
-      const userRoleStr = typeof userRole === 'string' ? userRole.toLowerCase() : 
-        typeof userRole === 'number' ? 
+      const userRoleStr = typeof userRole === 'string' ? userRole.toLowerCase() :
+        typeof userRole === 'number' ?
           (userRole === 2 ? 'student' : userRole === 1 ? 'faculty' : 'admin') : '';
-      
+
       const isStudent = userRoleStr === 'student';
       const isFaculty = userRoleStr === 'faculty';
       const isAdmin = userRoleStr === 'admin';
@@ -73,7 +73,7 @@ const Dashboard = () => {
         'isAdmin': isAdmin,
         'Full user object': JSON.stringify(user, null, 2)
       });
-      
+
       if (isStudent) {
         // Öğrenci için veriler
         try {
@@ -88,9 +88,9 @@ const Dashboard = () => {
           if (coursesRes.status === 'fulfilled') {
             const responseData = coursesRes.value.data;
             courses = responseData?.data || responseData || [];
-            console.log('✅ Courses API success:', { 
-              responseData, 
-              courses, 
+            console.log('✅ Courses API success:', {
+              responseData,
+              courses,
               coursesLength: courses.length,
               isArray: Array.isArray(courses)
             });
@@ -117,9 +117,9 @@ const Dashboard = () => {
             console.error('❌ Grades API failed:', gradesRes.reason?.response?.status);
           }
 
-          console.log('📊 Dashboard Data Final:', { 
-            courses, 
-            attendance, 
+          console.log('📊 Dashboard Data Final:', {
+            courses,
+            attendance,
             grades,
             coursesLength: courses.length
           });
@@ -139,10 +139,13 @@ const Dashboard = () => {
           // Son aktiviteler (enrollments'tan)
           const activities = [];
           courses.slice(0, 4).forEach((enrollment) => {
-            const courseCode = enrollment.section?.course?.code || enrollment.course?.code || 'Bilinmeyen';
+            // Backend can return course info in different places depending on DTO structure
+            const courseCode = enrollment.section?.courseCode || enrollment.section?.course?.code || enrollment.course?.code || enrollment.courseCode || 'Bilinmeyen';
+            const courseName = enrollment.section?.courseName || enrollment.section?.course?.name || enrollment.course?.name || enrollment.courseName || '';
+            const displayText = courseName ? `${courseCode} - ${courseName}` : courseCode;
             activities.push({
               id: enrollment.id,
-              title: `${courseCode} dersine kayıt oldunuz`,
+              title: `${displayText} dersine kayıt oldunuz`,
               time: formatTimeAgo(enrollment.enrollmentDate || enrollment.enrolledAt),
               type: 'success',
             });
@@ -164,14 +167,14 @@ const Dashboard = () => {
         try {
           const userId = user?.id || user?.Id;
           const facultyDepartmentId = user?.departmentId || user?.DepartmentId || user?.department?.id || user?.Department?.id;
-          
+
           console.log('🔍 Faculty Dashboard Debug:', {
             userId,
             facultyDepartmentId,
             userObject: user,
             userKeys: user ? Object.keys(user) : 'no user'
           });
-          
+
           const [sessionsRes, sectionsRes, studentsRes] = await Promise.allSettled([
             api.get('/attendance/sessions/my-sessions'), // Correct endpoint path
             api.get('/sections', {
@@ -181,14 +184,14 @@ const Dashboard = () => {
             }),
             // Öğretmenin bölümündeki tüm öğrencileri getir
             // Backend'de /admin/students endpoint'i artık Faculty için de açık ve departmentId parametresi alıyor
-            facultyDepartmentId 
+            facultyDepartmentId
               ? api.get('/admin/students', {
-                  params: {
-                    departmentId: facultyDepartmentId,
-                    page: 1,
-                    pageSize: 10000 // Tüm öğrencileri al
-                  }
-                })
+                params: {
+                  departmentId: facultyDepartmentId,
+                  page: 1,
+                  pageSize: 10000 // Tüm öğrencileri al
+                }
+              })
               : Promise.resolve({ data: { data: [] } })
           ]);
 
@@ -214,7 +217,7 @@ const Dashboard = () => {
           if (studentsRes.status === 'fulfilled' && facultyDepartmentId) {
             const responseData = studentsRes.value.data;
             let students = responseData?.data || responseData || [];
-            
+
             // Eğer /users endpoint'inden geldiyse, departmentId'ye göre filtrele
             if (Array.isArray(students) && students.length > 0) {
               const firstStudent = students[0];
@@ -226,7 +229,7 @@ const Dashboard = () => {
                 });
               }
             }
-            
+
             totalStudents = Array.isArray(students) ? students.length : 0;
             console.log('✅ Department students loaded:', {
               totalStudents,
@@ -243,7 +246,7 @@ const Dashboard = () => {
                 data: studentsRes.reason?.response?.data,
                 message: studentsRes.reason?.message
               });
-              
+
               // 403 hatası: Faculty için endpoint erişimi yok
               if (errorStatus === 403) {
                 console.warn('⚠️ Faculty does not have access to student endpoints. Backend needs a new endpoint for Faculty to get department student count.');
@@ -268,7 +271,7 @@ const Dashboard = () => {
           // Aktif oturumlar (status: 'active' - backend'den küçük harf geliyor)
           // Duplicate'leri önlemek için id'ye göre unique yap
           const activeSessionsMap = new Map();
-          sessions.filter(s => 
+          sessions.filter(s =>
             s.status === 'active' || s.status === 'Active' || s.isActive
           ).forEach(session => {
             if (session.id && !activeSessionsMap.has(session.id)) {
@@ -277,13 +280,13 @@ const Dashboard = () => {
           });
           const activeSessions = Array.from(activeSessionsMap.values());
           const activeSessionsCount = activeSessions.length;
-          
+
           // Aktif oturumları state'e kaydet
           setActiveSessionsList(activeSessions);
 
           // Unique courses (aynı course'un farklı section'ları olabilir)
           const uniqueCourses = new Set(sections.map(s => s.courseId || s.course?.id).filter(Boolean));
-          
+
           setStats({
             enrolledCourses: uniqueCourses.size || sections.length, // Verdiği ders sayısı (unique courses)
             attendancePercentage: 0, // Faculty için kullanılmıyor
@@ -361,14 +364,14 @@ const Dashboard = () => {
   // Role kontrolü (render için)
   // Backend'den enum string olarak geliyor: "Student", "Faculty", "Admin"
   const userRole = user?.role ?? user?.Role ?? user?.userRole ?? null;
-  const userRoleStr = typeof userRole === 'string' ? userRole.toLowerCase() : 
-    typeof userRole === 'number' ? 
+  const userRoleStr = typeof userRole === 'string' ? userRole.toLowerCase() :
+    typeof userRole === 'number' ?
       (userRole === 2 ? 'student' : userRole === 1 ? 'faculty' : 'admin') : '';
-  
+
   const isStudent = userRoleStr === 'student';
   const isFaculty = userRoleStr === 'faculty';
   const isAdmin = userRoleStr === 'admin';
-  
+
   console.log('🔍 Dashboard Role Check (Render):', {
     'user.role': user?.role,
     'user.Role': user?.Role,
@@ -394,11 +397,11 @@ const Dashboard = () => {
       title: 'Yoklama Yüzdesi',
       value: `${stats.attendancePercentage}%`,
       icon: CheckCircle,
-      color: stats.attendancePercentage >= 80 
-        ? 'from-green-500 to-green-600' 
-        : stats.attendancePercentage >= 60 
-        ? 'from-orange-500 to-orange-600' 
-        : 'from-red-500 to-red-600',
+      color: stats.attendancePercentage >= 80
+        ? 'from-green-500 to-green-600'
+        : stats.attendancePercentage >= 60
+          ? 'from-orange-500 to-orange-600'
+          : 'from-red-500 to-red-600',
       change: '',
       onClick: () => navigate('/my-attendance'),
     },
@@ -434,8 +437,8 @@ const Dashboard = () => {
       title: 'Aktif Yoklama Oturumları',
       value: stats.activeSessions.toString(),
       icon: Clock,
-      color: stats.activeSessions > 0 
-        ? 'from-green-500 to-green-600' 
+      color: stats.activeSessions > 0
+        ? 'from-green-500 to-green-600'
         : 'from-gray-500 to-gray-600',
       change: '',
       onClick: () => navigate('/attendance'),
@@ -725,11 +728,11 @@ const Dashboard = () => {
                           <div className="flex items-center gap-1">
                             <Clock className="w-4 h-4" />
                             <span>
-                              {typeof session.startTime === 'string' 
-                                ? session.startTime 
-                                : session.startTime?.substring(0, 5) || 'N/A'} - {typeof session.endTime === 'string' 
-                                ? session.endTime 
-                                : session.endTime?.substring(0, 5) || 'N/A'}
+                              {typeof session.startTime === 'string'
+                                ? session.startTime
+                                : session.startTime?.substring(0, 5) || 'N/A'} - {typeof session.endTime === 'string'
+                                  ? session.endTime
+                                  : session.endTime?.substring(0, 5) || 'N/A'}
                             </span>
                           </div>
                           {session.attendedCount !== undefined && (
@@ -789,22 +792,22 @@ const Dashboard = () => {
               <div className="text-center py-8">
                 <BookOpen className="w-12 h-12 text-slate-400 mx-auto mb-4" />
                 <p className="text-slate-600 dark:text-slate-400">
-                  {isStudent 
-                    ? 'Henüz aktivite bulunmuyor. Ders kataloğundan ders seçerek başlayabilirsiniz.' 
-                    : isFaculty 
-                    ? 'Henüz aktivite bulunmuyor. Dersleriniz ve yoklama oturumlarınız burada görünecek.'
-                    : 'Henüz aktivite bulunmuyor.'}
+                  {isStudent
+                    ? 'Henüz aktivite bulunmuyor. Ders kataloğundan ders seçerek başlayabilirsiniz.'
+                    : isFaculty
+                      ? 'Henüz aktivite bulunmuyor. Dersleriniz ve yoklama oturumlarınız burada görünecek.'
+                      : 'Henüz aktivite bulunmuyor.'}
                 </p>
                 {isStudent && (
-                <motion.button
-                  onClick={() => navigate('/courses')}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="mt-4 btn-primary relative z-10"
-                  style={{ pointerEvents: 'auto' }}
-                >
-                  Ders Kataloğuna Git
-                </motion.button>
+                  <motion.button
+                    onClick={() => navigate('/courses')}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="mt-4 btn-primary relative z-10"
+                    style={{ pointerEvents: 'auto' }}
+                  >
+                    Ders Kataloğuna Git
+                  </motion.button>
                 )}
               </div>
             ) : (
@@ -817,16 +820,14 @@ const Dashboard = () => {
                     transition={{ delay: 0.5 + index * 0.1 }}
                     className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                   >
-                    <div className={`p-2 rounded-lg ${
-                      activity.type === 'success' 
-                        ? 'bg-green-100 dark:bg-green-900/30' 
+                    <div className={`p-2 rounded-lg ${activity.type === 'success'
+                        ? 'bg-green-100 dark:bg-green-900/30'
                         : 'bg-blue-100 dark:bg-blue-900/30'
-                    }`}>
-                      <CheckCircle className={`w-5 h-5 ${
-                        activity.type === 'success' 
-                          ? 'text-green-600 dark:text-green-400' 
+                      }`}>
+                      <CheckCircle className={`w-5 h-5 ${activity.type === 'success'
+                          ? 'text-green-600 dark:text-green-400'
                           : 'text-blue-600 dark:text-blue-400'
-                      }`} />
+                        }`} />
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-slate-900 dark:text-white">
