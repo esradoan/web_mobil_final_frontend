@@ -37,6 +37,9 @@ api.interceptors.request.use(
     if (token && token !== 'undefined' && token.trim() !== '') {
       // Ensure Bearer prefix is correct
       config.headers.Authorization = `Bearer ${token.trim()}`;
+    } else {
+      // Debug: Log if token is missing
+      console.warn('⚠️ No access token found in localStorage for request:', config.url);
     }
     return config;
   },

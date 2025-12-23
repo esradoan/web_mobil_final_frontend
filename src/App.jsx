@@ -41,6 +41,10 @@ import Events from './pages/Events';
 import EventDetail from './pages/EventDetail';
 import MyEvents from './pages/MyEvents';
 import EventCheckIn from './pages/EventCheckIn';
+import MySchedule from './pages/MySchedule';
+import ClassroomReservations from './pages/ClassroomReservations';
+import GenerateSchedule from './pages/GenerateSchedule';
+import ClassroomReservationApprovals from './pages/ClassroomReservationApprovals';
 
 // Components
 import LoadingSpinner from './components/LoadingSpinner';
@@ -668,6 +672,70 @@ function AppRoutes() {
                 transition={{ duration: 0.3 }}
               >
                 <EventCheckIn />
+              </motion.div>
+            </ProtectedRoute>
+          }
+        />
+        {/* Part 3 - Scheduling Routes */}
+        <Route
+          path="/schedule"
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <MySchedule />
+              </motion.div>
+            </ProtectedRoute>
+          }
+        />
+        {/* Part 3 - Classroom Reservations Routes */}
+        <Route
+          path="/reservations"
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <ClassroomReservations />
+              </motion.div>
+            </ProtectedRoute>
+          }
+        />
+        {/* Part 3 - Admin Schedule Generation */}
+        <Route
+          path="/admin/scheduling/generate"
+          element={
+            <AdminRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <GenerateSchedule />
+              </motion.div>
+            </AdminRoute>
+          }
+        />
+        {/* Part 3 - Admin/Faculty Reservation Approvals */}
+        <Route
+          path="/admin/reservations/approvals"
+          element={
+            <ProtectedRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <ClassroomReservationApprovals />
               </motion.div>
             </ProtectedRoute>
           }

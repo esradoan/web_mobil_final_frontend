@@ -109,12 +109,12 @@ const MyCourses = () => {
             </p>
           </div>
           <motion.button
-            onClick={() => navigate('/courses')}
+            onClick={() => navigate('/student-course-application')}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="btn-primary"
           >
-            Yeni Ders Ekle
+            Ders Başvurusu Yap
           </motion.button>
         </motion.div>
 
@@ -135,12 +135,12 @@ const MyCourses = () => {
                 Henüz kayıtlı olduğunuz ders bulunmuyor
               </p>
               <motion.button
-                onClick={() => navigate('/courses')}
+                onClick={() => navigate('/student-course-application')}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="btn-primary"
               >
-                Ders Kataloğuna Git
+                Ders Başvurusu Yap
               </motion.button>
             </GlassCard>
           </AnimatedCard>

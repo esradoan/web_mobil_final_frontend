@@ -45,9 +45,44 @@ const StudentCourseApplication = () => {
       setLoading(true);
       const response = await api.get('/student-course-applications/available-courses');
       const coursesData = response.data || [];
+      console.log('✅ Courses fetched (raw):', coursesData);
+      console.log('✅ Courses count:', coursesData.length);
+      
+      // Log detailed section information for each course
+      coursesData.forEach((course, index) => {
+        const courseId = course.id || course.Id;
+        const courseCode = course.code || course.Code;
+        const sections = course.sections || course.Sections || [];
+        console.log(`📚 Course ${index + 1} - ${courseCode}:`, {
+          id: courseId,
+          code: courseCode,
+          name: course.name || course.Name,
+          sectionsRaw: course.sections,
+          SectionsRaw: course.Sections,
+          sectionsCount: sections.length,
+          sections: sections,
+          allKeys: Object.keys(course)
+        });
+        
+        // Log each section
+        sections.forEach((section, secIndex) => {
+          console.log(`  📋 Section ${secIndex + 1}:`, {
+            id: section.id || section.Id,
+            sectionNumber: section.sectionNumber || section.SectionNumber,
+            instructorId: section.instructorId || section.InstructorId,
+            instructorName: section.instructorName || section.InstructorName,
+            capacity: section.capacity || section.Capacity,
+            enrolledCount: section.enrolledCount || section.EnrolledCount,
+            allKeys: Object.keys(section)
+          });
+        });
+      });
+      
       setCourses(coursesData);
     } catch (error) {
       console.error('❌ Courses fetch failed:', error);
+      console.error('❌ Error response:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
       toast.error('Dersler yüklenirken hata oluştu');
     } finally {
       setLoading(false);
@@ -81,24 +116,30 @@ const StudentCourseApplication = () => {
 
   const handleApply = async (courseId, sectionId) => {
     try {
+      console.log('📝 Apply button clicked:', { courseId, sectionId });
       setApplyingSectionId(sectionId);
       
       // Önce bu section'a başvuru yapılıp yapılamayacağını kontrol et
+      console.log('🔍 Checking if can apply to section:', sectionId);
       const canApplyResponse = await api.get('/student-course-applications/can-apply', {
         params: { sectionId }
       });
+      console.log('✅ Can apply response:', canApplyResponse.data);
       
       if (!canApplyResponse.data?.canApply) {
         toast.error('Bu şubeye başvuru yapamazsınız. Kapasite dolmuş olabilir veya zaten başvuru yaptınız.');
         return;
       }
 
+      console.log('📤 Sending application:', { courseId, sectionId });
       await api.post('/student-course-applications', { courseId, sectionId });
       toast.success('Başvurunuz başarıyla gönderildi!');
       await fetchMyApplications();
       await fetchAvailableCourses();
     } catch (error) {
       console.error('❌ Application failed:', error);
+      console.error('❌ Error response:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
       const errorMessage = error.response?.data?.message || 'Başvuru yapılırken hata oluştu';
       toast.error(errorMessage);
     } finally {
@@ -107,13 +148,20 @@ const StudentCourseApplication = () => {
   };
 
   const getApplicationStatus = (sectionId) => {
-    const application = applications.find(app => app.sectionId === sectionId);
-    if (!application) return null;
+    // Handle both camelCase and PascalCase
+    const application = applications.find(app => 
+      (app.sectionId === sectionId) || (app.SectionId === sectionId)
+    );
+    if (!application) {
+      console.log('🔍 No application found for sectionId:', sectionId);
+      return null;
+    }
     
+    console.log('✅ Application found for sectionId:', sectionId, application);
     return {
-      status: application.status,
-      processedAt: application.processedAt,
-      rejectionReason: application.rejectionReason
+      status: application.status || application.Status,
+      processedAt: application.processedAt || application.ProcessedAt,
+      rejectionReason: application.rejectionReason || application.RejectionReason
     };
   };
 
@@ -256,8 +304,38 @@ const StudentCourseApplication = () => {
         ) : (
           <div className="space-y-4">
             {filteredCourses.map((course, index) => {
-              const hasInstructor = course.sections?.some(s => s.instructorId > 0);
-              const sections = course.sections || [];
+              // Handle both camelCase and PascalCase from backend
+              // Backend returns Sections (PascalCase), but check both
+              const sections = course.sections || course.Sections || [];
+              const hasInstructor = sections.length > 0 && sections.some(s => {
+                const instructorId = s.instructorId || s.InstructorId || 0;
+                return instructorId > 0;
+              });
+              
+              // Debug: Log course structure
+              console.log(`📚 Course ${course.code || course.Code}:`, {
+                id: course.id || course.Id,
+                code: course.code || course.Code,
+                name: course.name || course.Name,
+                sectionsRaw: course.sections,
+                SectionsRaw: course.Sections,
+                sectionsParsed: sections,
+                sectionsCount: sections.length,
+                sectionsType: typeof sections,
+                isArray: Array.isArray(sections),
+                hasInstructor,
+                allCourseKeys: Object.keys(course)
+              });
+              
+              // If sections is not an array, try to convert it
+              let validSections = sections;
+              if (!Array.isArray(sections) && sections !== null && sections !== undefined) {
+                console.warn('⚠️ Sections is not an array, attempting to convert:', sections);
+                validSections = [];
+              }
+              
+              // Use validSections for rendering
+              const sectionsToRender = validSections;
               
               return (
                 <AnimatedCard
@@ -298,50 +376,102 @@ const StudentCourseApplication = () => {
                         </div>
                       </div>
                       <motion.button
-                        onClick={() => setExpandedCourseId(expandedCourseId === course.id ? null : course.id)}
+                        onClick={() => {
+                          const courseId = course.id || course.Id;
+                          const isExpanded = expandedCourseId === courseId;
+                          console.log('🔘 Şubeleri Göster clicked for course:', {
+                            courseId,
+                            courseCode: course.code || course.Code,
+                            isExpanded,
+                            sections: sectionsToRender,
+                            sectionsCount: sectionsToRender.length
+                          });
+                          setExpandedCourseId(isExpanded ? null : courseId);
+                        }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         className="px-4 py-2 rounded-lg bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors"
                       >
-                        {expandedCourseId === course.id ? 'Gizle' : 'Şubeleri Göster'}
+                        {expandedCourseId === (course.id || course.Id) ? 'Gizle' : 'Şubeleri Göster'}
                       </motion.button>
                     </div>
 
                     {/* Sections */}
-                    {expandedCourseId === course.id && sections.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 space-y-3">
-                        {sections.map((section) => {
-                          const applicationStatus = getApplicationStatus(section.id);
-                          const isPending = applicationStatus?.status === 'Pending' || applicationStatus?.status === 0;
-                          const isApproved = applicationStatus?.status === 'Approved' || applicationStatus?.status === 1;
-                          const isRejected = applicationStatus?.status === 'Rejected' || applicationStatus?.status === 2;
-                          const isFull = section.enrolledCount >= section.capacity;
-                          
-                          return (
-                            <div
-                              key={section.id}
-                              className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700"
-                            >
+                    {expandedCourseId === (course.id || course.Id) && (
+                      <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                        {(() => {
+                          console.log('🔍 Rendering sections for course:', {
+                            courseId: course.id || course.Id,
+                            courseCode: course.code || course.Code,
+                            expandedCourseId,
+                            sections: sectionsToRender,
+                            sectionsLength: sectionsToRender.length,
+                            sectionsType: typeof sectionsToRender,
+                            isArray: Array.isArray(sectionsToRender),
+                            courseSections: course.sections,
+                            courseSectionsPascal: course.Sections
+                          });
+                          return null;
+                        })()}
+                        {sectionsToRender.length === 0 ? (
+                          <div className="text-center py-4 text-slate-500 dark:text-slate-400">
+                            <p>Bu ders için henüz şube oluşturulmamış.</p>
+                            <p className="text-xs mt-2 opacity-75">
+                              (Section sayısı: {sectionsToRender.length}, Tip: {typeof sectionsToRender}, Array: {Array.isArray(sectionsToRender) ? 'Evet' : 'Hayır'})
+                            </p>
+                            <p className="text-xs mt-1 opacity-50">
+                              Backend'den section'lar gelmiyor olabilir. Lütfen admin ile iletişime geçin.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {sectionsToRender.map((section, sectionIndex) => {
+                              // Handle both camelCase and PascalCase from backend
+                              const sectionId = section.id || section.Id;
+                              const applicationStatus = getApplicationStatus(sectionId);
+                              const isPending = applicationStatus?.status === 'Pending' || applicationStatus?.status === 0;
+                              const isApproved = applicationStatus?.status === 'Approved' || applicationStatus?.status === 1;
+                              const isRejected = applicationStatus?.status === 'Rejected' || applicationStatus?.status === 2;
+                              const enrolledCount = section.enrolledCount || section.EnrolledCount || 0;
+                              const capacity = section.capacity || section.Capacity || 0;
+                              const isFull = enrolledCount >= capacity;
+                              
+                              console.log('📋 Section render:', {
+                                index: sectionIndex,
+                                sectionId,
+                                sectionNumber: section.sectionNumber || section.SectionNumber,
+                                enrolledCount,
+                                capacity,
+                                isFull,
+                                applicationStatus,
+                                hasApplication: !!applicationStatus
+                              });
+                              
+                              return (
+                                <div
+                                  key={sectionId || sectionIndex}
+                                  className="p-4 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700"
+                                >
                               <div className="flex items-start justify-between mb-3">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-2">
                                     <span className="px-2 py-1 rounded text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
-                                      Şube {section.sectionNumber}
+                                      Şube {section.sectionNumber || section.SectionNumber}
                                     </span>
-                                    {section.instructorName && (
+                                    {(section.instructorName || section.InstructorName) && (
                                       <span className="text-sm text-slate-600 dark:text-slate-400">
-                                        Hoca: {section.instructorName}
+                                        Hoca: {section.instructorName || section.InstructorName}
                                       </span>
                                     )}
                                   </div>
                                   <div className="flex flex-wrap gap-4 text-sm text-slate-600 dark:text-slate-400">
                                     <div className="flex items-center gap-2">
                                       <Calendar className="w-4 h-4" />
-                                      <span>{section.semester} {section.year}</span>
+                                      <span>{(section.semester || section.Semester)} {(section.year || section.Year)}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                       <Users className="w-4 h-4" />
-                                      <span>{section.enrolledCount} / {section.capacity} öğrenci</span>
+                                      <span>{enrolledCount} / {capacity} öğrenci</span>
                                     </div>
                                   </div>
                                 </div>
@@ -354,17 +484,26 @@ const StudentCourseApplication = () => {
 
                               {!applicationStatus && (
                                 <motion.button
-                                  onClick={() => handleApply(course.id, section.id)}
-                                  disabled={applyingSectionId === section.id || isFull}
-                                  whileHover={{ scale: 1.02 }}
-                                  whileTap={{ scale: 0.98 }}
+                                  onClick={() => {
+                                    console.log('📝 Başvuru Yap button clicked:', {
+                                      courseId: course.id || course.Id,
+                                      sectionId,
+                                      isFull,
+                                      applyingSectionId,
+                                      hasApplication: !!applicationStatus
+                                    });
+                                    handleApply(course.id || course.Id, sectionId);
+                                  }}
+                                  disabled={applyingSectionId === sectionId || isFull}
+                                  whileHover={!isFull && applyingSectionId !== sectionId ? { scale: 1.02 } : {}}
+                                  whileTap={!isFull && applyingSectionId !== sectionId ? { scale: 0.98 } : {}}
                                   className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
-                                    isFull || applyingSectionId === section.id
+                                    isFull || applyingSectionId === sectionId
                                       ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
-                                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                      : 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
                                   }`}
                                 >
-                                  {applyingSectionId === section.id ? (
+                                  {applyingSectionId === sectionId ? (
                                     <span className="flex items-center justify-center gap-2">
                                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                                       Başvuru yapılıyor...
@@ -382,15 +521,11 @@ const StudentCourseApplication = () => {
                                   {applicationStatus.rejectionReason}
                                 </p>
                               )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {expandedCourseId === course.id && sections.length === 0 && (
-                      <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 text-center text-slate-500 dark:text-slate-400">
-                        Bu ders için henüz şube oluşturulmamış.
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

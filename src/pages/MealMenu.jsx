@@ -64,16 +64,25 @@ const MealMenu = () => {
     
     setLoading(true);
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      // Use local date instead of UTC to avoid timezone issues
+      // Format: YYYY-MM-DD
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
       const params = { date: dateStr };
       if (selectedCafeteria) {
         params.cafeteriaId = selectedCafeteria;
       }
       
-      console.log('Fetching menus with params:', params);
+      console.log('📅 Fetching menus with params:', params);
+      console.log('📅 Selected date (local):', selectedDate);
+      console.log('📅 Formatted date string:', dateStr);
       const response = await api.get('/meals/menus', { params });
       const menusData = response.data.data || [];
-      console.log('Menus received:', menusData);
+      console.log('✅ Menus received:', menusData);
+      console.log('✅ Menus count:', menusData.length);
       setMenus(menusData);
       
       if (menusData.length === 0) {
@@ -81,7 +90,9 @@ const MealMenu = () => {
         toast('Seçilen tarih için menü bulunamadı', { icon: 'ℹ️' });
       }
     } catch (error) {
-      console.error('Error fetching menus:', error);
+      console.error('❌ Error fetching menus:', error);
+      console.error('❌ Error response:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
       const errorMessage = error.response?.data?.message || 'Menüler yüklenirken hata oluştu';
       toast.error(errorMessage);
     } finally {
@@ -203,8 +214,22 @@ const MealMenu = () => {
                 </label>
                 <input
                   type="date"
-                  value={selectedDate.toISOString().split('T')[0]}
-                  onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                  value={(() => {
+                    // Format date as YYYY-MM-DD using local timezone
+                    const year = selectedDate.getFullYear();
+                    const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(selectedDate.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                  })()}
+                  onChange={(e) => {
+                    const newDate = new Date(e.target.value);
+                    console.log('📅 Date changed:', {
+                      inputValue: e.target.value,
+                      newDate: newDate,
+                      localDate: `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}-${String(newDate.getDate()).padStart(2, '0')}`
+                    });
+                    setSelectedDate(newDate);
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
                 />
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
