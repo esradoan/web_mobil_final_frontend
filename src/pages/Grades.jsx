@@ -286,10 +286,10 @@ const Grades = () => {
                         <td className="py-4 px-4">
                           <div>
                             <span className="font-mono font-semibold text-primary-600 dark:text-primary-400">
-                              {grade.course?.code}
+                              {grade.courseCode || '-'}
                             </span>
                             <p className="text-sm text-slate-600 dark:text-slate-400">
-                              {grade.course?.name}
+                              {grade.courseName || '-'}
                             </p>
                           </div>
                         </td>

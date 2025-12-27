@@ -10,7 +10,9 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  TrendingUp
+  TrendingUp,
+  Award,
+  CheckCircle2
 } from 'lucide-react';
 import AnimatedCard from '../components/AnimatedCard';
 import GlassCard from '../components/GlassCard';
@@ -147,6 +149,7 @@ const MyCourses = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {enrollments.map((enrollment, index) => {
+              const isCompleted = enrollment.status === 'completed';
               const attendanceStatus = getAttendanceStatus(enrollment.attendancePercentage || 0);
               const StatusIcon = attendanceStatus.icon;
 
@@ -159,26 +162,48 @@ const MyCourses = () => {
               const instructorName = enrollment.section?.instructorName || (instructorFirstName && instructorLastName ? `${instructorFirstName} ${instructorLastName}` : '');
               const courseId = enrollment.section?.courseId || enrollment.section?.course?.id;
 
+              // Grade color helper
+              const getGradeColor = (letterGrade) => {
+                if (!letterGrade) return 'text-slate-500 dark:text-slate-400';
+                if (['AA'].includes(letterGrade)) return 'text-green-600 dark:text-green-400';
+                if (['BA', 'BB'].includes(letterGrade)) return 'text-blue-600 dark:text-blue-400';
+                if (['CB', 'CC'].includes(letterGrade)) return 'text-yellow-600 dark:text-yellow-400';
+                if (['DC', 'DD'].includes(letterGrade)) return 'text-orange-600 dark:text-orange-400';
+                return 'text-red-600 dark:text-red-400';
+              };
+
               return (
                 <AnimatedCard key={enrollment.id} delay={index * 0.1}>
-                  <GlassCard className="p-6">
+                  <GlassCard className={`p-6 ${isCompleted ? 'opacity-90 border-2 border-green-500/30 dark:border-green-400/30' : ''}`}>
                     {/* Course Header */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="p-2 rounded-lg bg-gradient-to-br from-primary-500 to-purple-600">
-                            <BookOpen className="w-5 h-5 text-white" />
+                          <div className={`p-2 rounded-lg ${isCompleted ? 'bg-gradient-to-br from-green-500 to-green-600' : 'bg-gradient-to-br from-primary-500 to-purple-600'}`}>
+                            {isCompleted ? (
+                              <Award className="w-5 h-5 text-white" />
+                            ) : (
+                              <BookOpen className="w-5 h-5 text-white" />
+                            )}
                           </div>
-                          <div>
-                            <span className="font-mono font-bold text-primary-600 dark:text-primary-400">
-                              {courseCode || 'Ders Kodu'}
-                            </span>
-                            <span className="ml-2 text-sm text-slate-600 dark:text-slate-400">
-                              Section {sectionNumber || '?'}
-                            </span>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-primary-600 dark:text-primary-400">
+                                {courseCode || 'Ders Kodu'}
+                              </span>
+                              <span className="text-sm text-slate-600 dark:text-slate-400">
+                                Section {sectionNumber || '?'}
+                              </span>
+                              {isCompleted && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  Tamamlandı
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
+                        <h3 className={`text-xl font-bold mb-1 ${isCompleted ? 'text-slate-600 dark:text-slate-400' : 'text-slate-900 dark:text-white'}`}>
                           {courseName || 'Ders Adı'}
                         </h3>
                       </div>
@@ -193,47 +218,98 @@ const MyCourses = () => {
                     </div>
 
                     {/* Schedule */}
-                    <div className="flex items-center gap-2 mb-4 text-slate-600 dark:text-slate-400">
-                      <Calendar className="w-4 h-4" />
-                      <span className="text-sm">
-                        {formatSchedule(enrollment.section?.schedule)}
-                      </span>
-                    </div>
+                    {!isCompleted && (
+                      <div className="flex items-center gap-2 mb-4 text-slate-600 dark:text-slate-400">
+                        <Calendar className="w-4 h-4" />
+                        <span className="text-sm">
+                          {formatSchedule(enrollment.section?.schedule)}
+                        </span>
+                      </div>
+                    )}
 
-                    {/* Attendance Status */}
-                    <div className="mb-4 p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                          Yoklama Durumu
-                        </span>
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold ${attendanceStatus.bg} ${attendanceStatus.color}`}>
-                          <StatusIcon className="w-3 h-3" />
-                          {attendanceStatus.status}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                          <motion.div
-                            className={`h-2 rounded-full ${enrollment.attendancePercentage >= 80
-                                ? 'bg-green-500'
-                                : enrollment.attendancePercentage >= 60
-                                  ? 'bg-orange-500'
-                                  : 'bg-red-500'
-                              }`}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${enrollment.attendancePercentage || 0}%` }}
-                            transition={{ duration: 0.5 }}
-                          />
+                    {/* Completed Course - Grade Information */}
+                    {isCompleted && enrollment.letterGrade && (
+                      <div className="mb-4 p-4 rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                            Ders Notları
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-2xl font-bold ${getGradeColor(enrollment.letterGrade)}`}>
+                              {enrollment.letterGrade}
+                            </span>
+                            {enrollment.gradePoint && (
+                              <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">
+                                ({enrollment.gradePoint.toFixed(2)})
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                          {enrollment.attendancePercentage?.toFixed(1) || 0}%
-                        </span>
+                        <div className="grid grid-cols-3 gap-2 text-xs">
+                          {enrollment.midtermGrade != null && (
+                            <div>
+                              <span className="text-slate-500 dark:text-slate-400">Vize:</span>
+                              <span className="ml-1 font-semibold text-slate-700 dark:text-slate-300">
+                                {enrollment.midtermGrade.toFixed(1)}
+                              </span>
+                            </div>
+                          )}
+                          {enrollment.finalGrade != null && (
+                            <div>
+                              <span className="text-slate-500 dark:text-slate-400">Final:</span>
+                              <span className="ml-1 font-semibold text-slate-700 dark:text-slate-300">
+                                {enrollment.finalGrade.toFixed(1)}
+                              </span>
+                            </div>
+                          )}
+                          {enrollment.homeworkGrade != null && (
+                            <div>
+                              <span className="text-slate-500 dark:text-slate-400">Ödev:</span>
+                              <span className="ml-1 font-semibold text-slate-700 dark:text-slate-300">
+                                {enrollment.homeworkGrade.toFixed(1)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                    {/* Active Course - Attendance Status */}
+                    {!isCompleted && (
+                      <div className="mb-4 p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                            Yoklama Durumu
+                          </span>
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold ${attendanceStatus.bg} ${attendanceStatus.color}`}>
+                            <StatusIcon className="w-3 h-3" />
+                            {attendanceStatus.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-2">
+                            <motion.div
+                              className={`h-2 rounded-full ${enrollment.attendancePercentage >= 80
+                                  ? 'bg-green-500'
+                                  : enrollment.attendancePercentage >= 60
+                                    ? 'bg-orange-500'
+                                    : 'bg-red-500'
+                                }`}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${enrollment.attendancePercentage || 0}%` }}
+                              transition={{ duration: 0.5 }}
+                            />
+                          </div>
+                          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                            {enrollment.attendancePercentage?.toFixed(1) || 0}%
+                          </span>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Enrollment Date */}
                     <div className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-                      Kayıt Tarihi: {new Date(enrollment.enrollmentDate).toLocaleDateString('tr-TR')}
+                      {isCompleted ? 'Tamamlanma Tarihi' : 'Kayıt Tarihi'}: {new Date(enrollment.enrollmentDate).toLocaleDateString('tr-TR')}
                     </div>
 
                     {/* Actions */}
@@ -246,26 +322,38 @@ const MyCourses = () => {
                       >
                         Detaylar
                       </motion.button>
-                      <motion.button
-                        onClick={() => handleDrop(enrollment.id)}
-                        disabled={dropping[enrollment.id]}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="btn-danger text-sm px-4"
-                      >
-                        {dropping[enrollment.id] ? (
-                          <motion.div
-                            className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                          />
-                        ) : (
-                          <>
-                            <Trash2 className="w-4 h-4 inline mr-1" />
-                            Bırak
-                          </>
-                        )}
-                      </motion.button>
+                      {!isCompleted ? (
+                        <motion.button
+                          onClick={() => handleDrop(enrollment.id)}
+                          disabled={dropping[enrollment.id]}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="btn-danger text-sm px-4"
+                        >
+                          {dropping[enrollment.id] ? (
+                            <motion.div
+                              className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                            />
+                          ) : (
+                            <>
+                              <Trash2 className="w-4 h-4 inline mr-1" />
+                              Bırak
+                            </>
+                          )}
+                        </motion.button>
+                      ) : (
+                        <motion.button
+                          onClick={() => navigate('/grades')}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="btn-secondary text-sm px-4"
+                        >
+                          <Award className="w-4 h-4 inline mr-1" />
+                          Notlarım
+                        </motion.button>
+                      )}
                     </div>
                   </GlassCard>
                 </AnimatedCard>
