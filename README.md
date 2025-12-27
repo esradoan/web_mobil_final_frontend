@@ -100,6 +100,45 @@ Frontend, .NET backend API'sine bağlanır:
 - `/dashboard` - Ana dashboard
 - `/profile` - Profil yönetimi
 
+## 🧪 Testing
+
+### Quick Test Run
+```bash
+npm test
+```
+
+### Test Coverage Report
+
+To generate a comprehensive code coverage report:
+
+```powershell
+.\run-tests-frontend.ps1
+```
+
+This script will:
+1. Install dependencies (if needed)
+2. Run all tests with code coverage
+3. Generate HTML coverage reports
+
+**Report Locations**:
+- `coverage/lcov-report/index.html` - LCOV HTML report
+- `coverage/index.html` - Detailed coverage report
+
+**Prerequisites**:
+- Node.js and npm installed
+- Dependencies installed (`npm install`)
+
+**Coverage Exclusions**:
+- `node_modules/`
+- Test setup files (`src/test/`)
+- Config files (`*.config.js`)
+- Entry points (`main.jsx`, `App.jsx`)
+
+**Available Test Commands**:
+- `npm test` - Run tests in watch mode
+- `npm run test:ui` - Run tests with Vitest UI
+- `npm run test:coverage` - Run tests and generate coverage report
+
 ## 🚀 Deployment
 
 Railway veya başka bir platforma deploy için:
