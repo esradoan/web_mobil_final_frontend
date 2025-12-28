@@ -45,6 +45,8 @@ import MySchedule from './pages/MySchedule';
 import ClassroomReservations from './pages/ClassroomReservations';
 import GenerateSchedule from './pages/GenerateSchedule';
 import ClassroomReservationApprovals from './pages/ClassroomReservationApprovals';
+import AdminMealMenuManagement from './pages/AdminMealMenuManagement';
+import AdminEventManagement from './pages/AdminEventManagement';
 
 // Components
 import LoadingSpinner from './components/LoadingSpinner';
@@ -278,6 +280,36 @@ function AppRoutes() {
                 transition={{ duration: 0.3 }}
               >
                 <CourseApplicationsManagement />
+              </motion.div>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/meals/menus"
+          element={
+            <AdminRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <AdminMealMenuManagement />
+              </motion.div>
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/events"
+          element={
+            <AdminRoute>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <AdminEventManagement />
               </motion.div>
             </AdminRoute>
           }

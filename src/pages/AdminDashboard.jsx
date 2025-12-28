@@ -28,7 +28,10 @@ import {
   Globe,
   Save,
   X,
-  Clock
+  Clock,
+  UtensilsCrossed,
+  ChefHat,
+  Calendar
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import AnimatedCard from '../components/AnimatedCard';
@@ -820,6 +823,55 @@ const AdminDashboard = () => {
                 Admin
               </p>
             </GlassCard>
+          </AnimatedCard>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <AnimatedCard delay={0.5}>
+            <motion.div
+              className="p-6 cursor-pointer hover:shadow-xl transition-shadow bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl"
+              onClick={() => navigate('/admin/meals/menus')}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <UtensilsCrossed className="w-8 h-8" />
+                <ChefHat className="w-6 h-6 opacity-80" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Yemek Menüsü Yönetimi</h3>
+              <p className="text-sm opacity-90">Menüleri oluştur ve yönet</p>
+            </motion.div>
+          </AnimatedCard>
+          <AnimatedCard delay={0.6}>
+            <motion.div
+              className="p-6 cursor-pointer hover:shadow-xl transition-shadow bg-gradient-to-br from-purple-500 to-pink-600 text-white rounded-xl"
+              onClick={() => navigate('/admin/events')}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <Calendar className="w-8 h-8" />
+                <Globe className="w-6 h-6 opacity-80" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Etkinlik Yönetimi</h3>
+              <p className="text-sm opacity-90">Etkinlikleri oluştur ve yönet</p>
+            </motion.div>
+          </AnimatedCard>
+          <AnimatedCard delay={0.7}>
+            <motion.div
+              className="p-6 cursor-pointer hover:shadow-xl transition-shadow bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-xl"
+              onClick={() => navigate('/course-applications-management')}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <CheckCircle className="w-8 h-8" />
+                <FileText className="w-6 h-6 opacity-80" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">Ders Başvuru Yönetimi</h3>
+              <p className="text-sm opacity-90">Ders başvurularını onayla</p>
+            </motion.div>
           </AnimatedCard>
         </div>
 
